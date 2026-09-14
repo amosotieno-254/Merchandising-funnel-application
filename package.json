@@ -1,0 +1,21 @@
+{
+  "name": "mms-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/shared",
+    "packages/vendor-management/backend",
+    "packages/procurement/backend",
+    "packages/inventory/backend"
+  ],
+  "scripts": {
+    "dev:vendor": "npm --workspace @mms/vendor-backend run dev",
+    "dev:procurement": "npm --workspace @mms/procurement-backend run dev",
+    "dev:inventory": "npm --workspace @mms/inventory-backend run dev",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2"
+  }
+}

@@ -1,0 +1,136 @@
+openapi: 3.0.3
+info:
+  title: Inventory Service
+  version: 1.0.0
+  description: |
+    Single source of truth for stock levels across all locations.
+    Distinguishes On Hand, Allocated, and Available quantities; tracks
+    monetary value of stock on hand.
+servers:
+  - url: http://localhost:3003
+    description: Local development
+paths:
+  /api/v1/stock:
+    get:
+      summary: List stock across all locations
+      operationId: listStock
+      tags: [Stock]
+      responses:
+        '200':
+          description: List of stock rows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockListResponse'
+  /api/v1/stock/{productCode}/available:
+    get:
+      summary: Check available stock for a product at a location
+      operationId: getAvailableStock
+      tags: [Stock]
+      parameters:
+        - name: productCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: location
+          in: query
+          required: true
+          schema: { type: string, example: MAIN_WAREHOUSE }
+      responses:
+        '200':
+          description: Availability result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailableResponse'
+  /api/v1/stock/receive:
+    post:
+      summary: Increase stock (used when goods are received)
+      operationId: receiveStock
+      tags: [Stock]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockMovementRequest'
+      responses:
+        '200':
+          description: Existing row updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockResponse'
+        '201':
+          description: New row created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockResponse'
+  /api/v1/stock/sell:
+    post:
+      summary: Decrease stock (used when an item is sold)
+      operationId: sellStock
+      tags: [Stock]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SellStockRequest'
+      responses:
+        '200':
+          description: Stock decreased
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockResponse'
+        '400':
+          description: Insufficient stock
+components:
+  schemas:
+    Stock:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productCode: { type: string }
+        location: { type: string }
+        onHand: { type: integer }
+        allocated: { type: integer }
+        unitCost: { type: string, example: "10.00" }
+        updatedAt: { type: string, format: date-time }
+    StockMovementRequest:
+      type: object
+      required: [productCode, location, quantity, unitCost]
+      properties:
+        productCode: { type: string }
+        location: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitCost: { type: string }
+    SellStockRequest:
+      type: object
+      required: [productCode, location, quantity]
+      properties:
+        productCode: { type: string }
+        location: { type: string }
+        quantity: { type: integer, minimum: 1 }
+    StockResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/Stock' }
+    StockListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Stock' }
+    AvailableResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            available: { type: integer }
