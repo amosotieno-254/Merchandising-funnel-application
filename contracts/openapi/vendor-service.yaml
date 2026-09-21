@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: Vendor Management Service
+  version: 1.0.0
+  description: |
+    Authoritative record of approved suppliers, their contact details,
+    payment terms, lead times, and approved product catalogs.
+servers:
+  - url: http://localhost:3001
+    description: Local development
+paths:
+  /api/v1/suppliers:
+    get:
+      summary: List all suppliers
+      operationId: listSuppliers
+      tags: [Suppliers]
+      responses:
+        '200':
+          description: A list of suppliers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierListResponse'
+    post:
+      summary: Create a supplier
+      operationId: createSupplier
+      tags: [Suppliers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupplierRequest'
+      responses:
+        '201':
+          description: Supplier created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierResponse'
+        '400':
+          description: Invalid input
+  /api/v1/suppliers/{id}:
+    get:
+      summary: Get a supplier by ID
+      operationId: getSupplier
+      tags: [Suppliers]
+      parameters:
+        - $ref: '#/components/parameters/SupplierId'
+      responses:
+        '200':
+          description: Supplier found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierResponse'
+        '404':
+          description: Supplier not found
+  /api/v1/suppliers/{id}/products:
+    get:
+      summary: List products offered by a supplier
+      operationId: listSupplierProducts
+      tags: [Catalog]
+      parameters:
+        - $ref: '#/components/parameters/SupplierId'
+      responses:
+        '200':
+          description: Supplier catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProductListResponse'
+    post:
+      summary: Add a product to a supplier catalog
+      operationId: addSupplierProduct
+      tags: [Catalog]
+      parameters:
+        - $ref: '#/components/parameters/SupplierId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddSupplierProductRequest'
+      responses:
+        '201':
+          description: Product added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProductResponse'
+components:
+  parameters:
+    SupplierId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Supplier:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        contactEmail: { type: string, format: email }
+        paymentTerms: { type: string, example: "Net 30" }
+        leadTimeDays: { type: integer, example: 7 }
+        createdAt: { type: string, format: date-time }
+    SupplierProduct:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        supplierId: { type: string, format: uuid }
+        productCode: { type: string, example: "SKU-001" }
+        unitCost: { type: string, example: "10.00" }
+    CreateSupplierRequest:
+      type: object
+      required: [name, contactEmail, paymentTerms, leadTimeDays]
+      properties:
+        name: { type: string }
+        contactEmail: { type: string, format: email }
+        paymentTerms: { type: string }
+        leadTimeDays: { type: integer }
+    AddSupplierProductRequest:
+      type: object
+      required: [productCode, unitCost]
+      properties:
+        productCode: { type: string }
+        unitCost: { type: string }
+    SupplierResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/Supplier' }
+    SupplierListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Supplier' }
+    SupplierProductResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/SupplierProduct' }
+    SupplierProductListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/SupplierProduct' }

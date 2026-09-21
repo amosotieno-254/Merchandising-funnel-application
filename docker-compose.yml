@@ -1,0 +1,44 @@
+services:
+  vendor-db:
+    image: postgres:16
+    container_name: mms-vendor-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vendor
+      POSTGRES_PASSWORD: vendor
+      POSTGRES_DB: vendor_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - vendor-data:/var/lib/postgresql/data
+
+  procurement-db:
+    image: postgres:16
+    container_name: mms-procurement-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: procurement
+      POSTGRES_PASSWORD: procurement
+      POSTGRES_DB: procurement_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - procurement-data:/var/lib/postgresql/data
+
+  inventory-db:
+    image: postgres:16
+    container_name: mms-inventory-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - inventory-data:/var/lib/postgresql/data
+
+volumes:
+  vendor-data:
+  procurement-data:
+  inventory-data:
