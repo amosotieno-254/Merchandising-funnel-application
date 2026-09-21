@@ -1,9 +1,8 @@
-version: '3.8'
-
 services:
   vendor-db:
     image: postgres:16
     container_name: mms-vendor-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: vendor
       POSTGRES_PASSWORD: vendor
@@ -16,6 +15,7 @@ services:
   procurement-db:
     image: postgres:16
     container_name: mms-procurement-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: procurement
       POSTGRES_PASSWORD: procurement
@@ -28,6 +28,7 @@ services:
   inventory-db:
     image: postgres:16
     container_name: mms-inventory-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: inventory
       POSTGRES_PASSWORD: inventory
