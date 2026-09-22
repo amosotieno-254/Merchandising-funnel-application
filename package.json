@@ -7,8 +7,7 @@
     "packages/vendor-management/backend",
     "packages/procurement/backend",
     "packages/inventory/backend",
-    "packages/receiving/backend",
-    "packages/warehouse-operations/backend"
+    "packages/receiving/backend"
   ],
   "scripts": {
     "dev:vendor": "npm --workspace @mms/vendor-backend run dev",
