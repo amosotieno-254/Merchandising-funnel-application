@@ -11,3 +11,5 @@ export function ok<T>(data: T): ApiResponse<T> {
 export function fail(error: string): ApiResponse<never> {
   return { success: false, error };
 }
+
+export { publishEvent, subscribeEvent, EXCHANGE } from './event-bus.js';
