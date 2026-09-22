@@ -38,7 +38,35 @@ services:
     volumes:
       - inventory-data:/var/lib/postgresql/data
 
+  receiving-db:
+    image: postgres:16
+    container_name: mms-receiving-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: receiving
+      POSTGRES_PASSWORD: receiving
+      POSTGRES_DB: receiving_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - receiving-data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: mms-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: mms
+      RABBITMQ_DEFAULT_PASS: mms
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
 volumes:
   vendor-data:
   procurement-data:
   inventory-data:
+  receiving-data:
+  rabbitmq-data:

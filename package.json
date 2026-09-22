@@ -6,12 +6,15 @@
     "packages/shared",
     "packages/vendor-management/backend",
     "packages/procurement/backend",
-    "packages/inventory/backend"
+    "packages/inventory/backend",
+    "packages/receiving/backend"
   ],
   "scripts": {
     "dev:vendor": "npm --workspace @mms/vendor-backend run dev",
     "dev:procurement": "npm --workspace @mms/procurement-backend run dev",
     "dev:inventory": "npm --workspace @mms/inventory-backend run dev",
+    "dev:receiving": "npm --workspace @mms/receiving-backend run dev",
+    "dev:warehouse": "npm --workspace @mms/warehouse-operations-backend run dev",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },

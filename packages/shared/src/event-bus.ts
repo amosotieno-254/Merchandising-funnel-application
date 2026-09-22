@@ -1,10 +1,10 @@
-import amqp, { Connection, Channel } from 'amqplib';
+import amqp, { ChannelModel, Channel } from 'amqplib';
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL ?? 'amqp://mms:mms@localhost:5672';
 
 export const EXCHANGE = 'mms.events';
 
-let connection: Connection | null = null;
+let connection: ChannelModel | null = null;
 let channel: Channel | null = null;
 
 async function getChannel(): Promise<Channel> {
