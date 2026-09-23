@@ -1,41 +1,31 @@
 import type { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
-import { db } from '../infrastructure/db.js';
-import { suppliers, supplierProducts } from '../infrastructure/schema.js';
 import { ok, fail } from '@mms/shared';
+import { service } from './service.js';
 
 export async function listSuppliers(_req: Request, res: Response) {
-  const rows = await db.select().from(suppliers);
-  res.json(ok(rows));
+  res.json(ok(await service.listSuppliers()));
 }
 
 export async function getSupplier(req: Request, res: Response) {
-  const [row] = await db
-    .select()
-    .from(suppliers)
-    .where(eq(suppliers.id, req.params.id));
-
-  if (!row) return res.status(404).json(fail('Supplier not found'));
-  res.json(ok(row));
+  const supplier = await service.getSupplierById(req.params.id);
+  if (!supplier) return res.status(404).json(fail('Supplier not found'));
+  res.json(ok(supplier));
 }
 
 export async function createSupplier(req: Request, res: Response) {
-  const [row] = await db.insert(suppliers).values(req.body).returning();
-  res.status(201).json(ok(row));
-}
-
-export async function addSupplierProduct(req: Request, res: Response) {
-  const [row] = await db
-    .insert(supplierProducts)
-    .values({ supplierId: req.params.id, ...req.body })
-    .returning();
-  res.status(201).json(ok(row));
+  const created = await service.createSupplier(req.body);
+  res.status(201).json(ok(created));
 }
 
 export async function listSupplierProducts(req: Request, res: Response) {
-  const rows = await db
-    .select()
-    .from(supplierProducts)
-    .where(eq(supplierProducts.supplierId, req.params.id));
-  res.json(ok(rows));
+  res.json(ok(await service.listSupplierProducts(req.params.id)));
+}
+
+export async function addSupplierProduct(req: Request, res: Response) {
+  const created = await service.addSupplierProduct({
+    supplierId: req.params.id,
+    productCode: req.body.productCode,
+    unitCost: req.body.unitCost,
+  });
+  res.status(201).json(ok(created));
 }

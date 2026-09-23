@@ -13,7 +13,6 @@ export async function startSubscribers() {
         paymentTerms: p.paymentTerms,
         lines: JSON.stringify(p.lines),
       });
-      console.log('📦 Expected delivery recorded for PO', p.purchaseOrderId);
     },
     'receiving.expected-deliveries'
   );
