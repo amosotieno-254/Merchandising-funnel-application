@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../infrastructure/db.js';
 import { purchaseOrders, purchaseOrderLines } from '../infrastructure/schema.js';
 import { ok, fail } from '@mms/shared';
+import { publishPurchaseOrderApproved } from '../events/publisher.js';
 
 export async function listPurchaseOrders(_req: Request, res: Response) {
   const rows = await db.select().from(purchaseOrders);
@@ -61,5 +62,23 @@ export async function approvePurchaseOrder(req: Request, res: Response) {
     .returning();
 
   if (!po) return res.status(404).json(fail('PO not found'));
+
+  const lines = await db
+    .select()
+    .from(purchaseOrderLines)
+    .where(eq(purchaseOrderLines.poId, po.id));
+
+  await publishPurchaseOrderApproved({
+    purchaseOrderId: po.id,
+    supplierId: po.supplierId,
+    totalCost: po.totalCost,
+    paymentTerms: po.paymentTerms,
+    lines: lines.map((line) => ({
+      productCode: line.productCode,
+      quantity: line.quantity,
+      unitCost: line.unitCost,
+    })),
+  });
+
   res.json(ok(po));
 }

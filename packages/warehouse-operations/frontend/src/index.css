@@ -1,29 +1,29 @@
 :root {
-  --bg: #f7f5fb;
-  --panel: #ffffff;
-  --topbar: #ffffff;
-  --text: #231b36;
-  --muted: #766c8c;
-  --border: #e7e2f0;
-  --side: #ffffff;
-  --side-text: #5b5270;
-  --side-strong: #231b36;
-  --side-hover: #f3effa;
-  --accent: #7c3aed;
-  --accent-soft: #efe7fd;
-  --on-accent: #ffffff;
-  --row-hover: #faf8fd;
-  --neutral-bg: #f0edf5;
-  --radius: 10px;
+  --bg: #0b1117;
+  --panel: #121a23;
+  --topbar: #0e151d;
+  --text: #dbe6f0;
+  --muted: #7f93a6;
+  --border: #1f2b38;
+  --side: #070c11;
+  --side-text: #8ea3b7;
+  --side-strong: #e8f4ff;
+  --side-hover: rgba(34,211,238,.08);
+  --accent: #22d3ee;
+  --accent-soft: rgba(34,211,238,.14);
+  --on-accent: #04232a;
+  --row-hover: #16202b;
+  --neutral-bg: #1b2632;
+  --radius: 8px;
   --radius-sm: 6px;
+  --ok: #34d399;
+  --ok-soft: rgba(52,211,153,.14);
+  --warn: #fbbf24;
+  --warn-soft: rgba(251,191,36,.14);
+  --err: #f87171;
+  --err-soft: rgba(248,113,113,.14);
   --font: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --heading: Georgia, 'Times New Roman', serif;
-  --ok: #1f9d55;
-  --ok-soft: #e3f6eb;
-  --warn: #c77700;
-  --warn-soft: #fff3de;
-  --err: #d33a3a;
-  --err-soft: #fde8e8;
+  --heading: 'JetBrains Mono', ui-monospace, Consolas, monospace;
   font-family: var(--font);
   color: var(--text);
   background: var(--bg);
@@ -142,8 +142,9 @@ tr.selected, tr.selected:hover { background: var(--accent-soft); }
   .row, .actions { grid-template-columns: 1fr; }
 }
 
-/* Procurement: light sidebar with an accent rail */
-.sidebar { border-right: 1px solid var(--border); }
-.nav-btn.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; box-shadow: inset 3px 0 0 var(--accent); }
-.card { border-top: 3px solid var(--accent); }
-h1 { font-size: 1.45rem; }
+/* Warehouse operations: dark control-room look */
+:root { color-scheme: dark; }
+.card strong, td.num { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; }
+.card strong { color: var(--accent); }
+.nav-btn.active { box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(34,211,238,.25); }
+.logo { text-shadow: 0 0 12px rgba(34,211,238,.6); }

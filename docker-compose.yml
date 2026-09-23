@@ -51,6 +51,19 @@ services:
     volumes:
       - receiving-data:/var/lib/postgresql/data
 
+  warehouse-db:
+    image: postgres:16
+    container_name: mms-warehouse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: warehouse
+      POSTGRES_DB: warehouse_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - warehouse-data:/var/lib/postgresql/data
+
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: mms-rabbitmq
@@ -70,3 +83,4 @@ volumes:
   inventory-data:
   receiving-data:
   rabbitmq-data:
+  warehouse-data:
