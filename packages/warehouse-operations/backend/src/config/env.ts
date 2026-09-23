@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   DATABASE_URL: z
-    .string({ required_error: 'DATABASE_URL is required' })
+    .string()
     .url({ message: 'DATABASE_URL must be a valid URL' })
     .refine(
       (value) =>
@@ -15,7 +15,7 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Invalid environment variables:');
+  console.error('Invalid environment variables:');
   for (const issue of parsed.error.issues) {
     console.error(`   - ${issue.path.join('.')}: ${issue.message}`);
   }

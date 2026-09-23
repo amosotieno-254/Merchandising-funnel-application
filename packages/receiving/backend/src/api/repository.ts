@@ -7,7 +7,6 @@ import {
 } from '../infrastructure/schema.js';
 
 export const repository = {
-  // Expected deliveries
   listExpectedDeliveries() {
     return db.select().from(expectedDeliveries);
   },
@@ -21,7 +20,6 @@ export const repository = {
     return db.insert(expectedDeliveries).values(values).returning();
   },
 
-  // Goods received notes
   listGoodsReceivedNotes() {
     return db.select().from(goodsReceivedNotes);
   },

@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: Warehouse Operations Service
+  version: 1.0.0
+  description: |
+    Manages the physical geography of the warehouse: storage bins, putaway
+    tasks, pick tasks, and stock transfers between locations. Subscribes to
+    GoodsReceived and auto-creates putaway tasks.
+servers:
+  - url: http://localhost:3005
+    description: Local development
+paths:
+  /api/v1/storage-bins:
+    get:
+      summary: List all storage bins
+      operationId: listStorageBins
+      tags: [StorageBins]
+      responses:
+        '200':
+          description: A list of storage bins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageBinListResponse'
+    post:
+      summary: Create a storage bin
+      operationId: createStorageBin
+      tags: [StorageBins]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStorageBinRequest'
+      responses:
+        '201':
+          description: Storage bin created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageBinResponse'
+
+  /api/v1/putaway-tasks:
+    get:
+      summary: List all putaway tasks
+      operationId: listPutawayTasks
+      tags: [PutawayTasks]
+      responses:
+        '200':
+          description: A list of putaway tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutawayTaskListResponse'
+
+  /api/v1/putaway-tasks/{id}/complete:
+    post:
+      summary: Complete a putaway task by assigning it to a bin
+      operationId: completePutawayTask
+      tags: [PutawayTasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompletePutawayTaskRequest'
+      responses:
+        '200':
+          description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutawayTaskResponse'
+        '404':
+          description: Task not found
+
+  /api/v1/pick-tasks:
+    get:
+      summary: List all pick tasks
+      operationId: listPickTasks
+      tags: [PickTasks]
+      responses:
+        '200':
+          description: A list of pick tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickTaskListResponse'
+    post:
+      summary: Create a pick task
+      operationId: createPickTask
+      tags: [PickTasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePickTaskRequest'
+      responses:
+        '201':
+          description: Pick task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickTaskResponse'
+
+  /api/v1/stock-transfers:
+    get:
+      summary: List all stock transfers
+      operationId: listStockTransfers
+      tags: [StockTransfers]
+      responses:
+        '200':
+          description: A list of stock transfers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockTransferListResponse'
+    post:
+      summary: Create a stock transfer between two locations
+      operationId: createStockTransfer
+      tags: [StockTransfers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStockTransferRequest'
+      responses:
+        '201':
+          description: Stock transfer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockTransferResponse'
+
+components:
+  schemas:
+    StorageBin:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        binCode: { type: string, example: "A-01" }
+        zone: { type: string, example: "Fast Moving" }
+        capacity: { type: integer, example: 200 }
+        createdAt: { type: string, format: date-time }
+
+    PutawayTask:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productCode: { type: string, example: "SKU-001" }
+        quantity: { type: integer, example: 95 }
+        assignedBinId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, COMPLETED]
+        createdAt: { type: string, format: date-time }
+
+    PickTask:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productCode: { type: string }
+        quantity: { type: integer }
+        fromBinId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, COMPLETED]
+        createdAt: { type: string, format: date-time }
+
+    StockTransfer:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productCode: { type: string }
+        fromLocation: { type: string, example: "MAIN_WAREHOUSE" }
+        toLocation: { type: string, example: "STORE_3" }
+        quantity: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    CreateStorageBinRequest:
+      type: object
+      required: [binCode, zone, capacity]
+      properties:
+        binCode: { type: string, example: "A-01" }
+        zone: { type: string, example: "Fast Moving" }
+        capacity: { type: integer, minimum: 1 }
+
+    CompletePutawayTaskRequest:
+      type: object
+      required: [assignedBinId]
+      properties:
+        assignedBinId: { type: string, format: uuid }
+
+    CreatePickTaskRequest:
+      type: object
+      required: [productCode, quantity]
+      properties:
+        productCode: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        fromBinId:
+          type: string
+          format: uuid
+          nullable: true
+
+    CreateStockTransferRequest:
+      type: object
+      required: [productCode, fromLocation, toLocation, quantity]
+      properties:
+        productCode: { type: string }
+        fromLocation: { type: string }
+        toLocation: { type: string }
+        quantity: { type: integer, minimum: 1 }
+
+    StorageBinResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/StorageBin' }
+
+    StorageBinListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/StorageBin' }
+
+    PutawayTaskResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/PutawayTask' }
+
+    PutawayTaskListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/PutawayTask' }
+
+    PickTaskResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/PickTask' }
+
+    PickTaskListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/PickTask' }
+
+    StockTransferResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/StockTransfer' }
+
+    StockTransferListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/StockTransfer' }

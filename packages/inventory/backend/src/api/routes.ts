@@ -4,7 +4,7 @@ import {
   checkAvailability,
   receiveStock,
   sellStock,
-} from './controllers.js';
+} from './inventoryControllers.js';
 
 export const inventoryRouter = Router();
 

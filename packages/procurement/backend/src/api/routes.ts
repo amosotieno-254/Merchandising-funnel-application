@@ -4,7 +4,7 @@ import {
   getPurchaseOrder,
   createPurchaseOrder,
   approvePurchaseOrder,
-} from './controllers.js';
+} from './procurementControllers.js';
 
 export const procurementRouter = Router();
 

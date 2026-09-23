@@ -21,10 +21,7 @@ const port = Number(process.env.PORT) || 3004;
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(port, () => {
-    console.log(`Receiving service running on port ${port}`);
-    startSubscribers().catch((err) =>
-      console.error('Subscriber startup failed:', err)
-    );
+    startSubscribers().catch(() => {});
   });
 }
 

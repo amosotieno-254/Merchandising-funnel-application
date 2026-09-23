@@ -4,7 +4,7 @@ import {
   listGoodsReceivedNotes,
   getGoodsReceivedNote,
   createGoodsReceivedNote,
-} from './controllers.js';
+} from './receivingControllers.js';
 
 export const receivingRouter = Router();
 
