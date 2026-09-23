@@ -16,9 +16,7 @@ export async function startSubscribers() {
         });
       }
 
-      console.log(
-        `Putaway tasks created for Goods Received Note ${event.payload.goodsReceivedNoteId}`
-      );
+    
     },
     'warehouse.putaway-tasks'
   );

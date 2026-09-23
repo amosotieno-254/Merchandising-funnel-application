@@ -1,81 +1,49 @@
 import type { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
-import { database } from '../infrastructure/db.js';
-import {
-  storageBins,
-  putawayTasks,
-  pickTasks,
-  stockTransfers,
-} from '../infrastructure/schema.js';
-import { ok as successResponse, fail as errorResponse } from '@mms/shared';
+import { ok, fail } from '@mms/shared';
+import { service } from './service.js';
 
-// ----- Storage Bins -----
-
-export async function listStorageBins(_request: Request, response: Response) {
-  const bins = await database.select().from(storageBins);
-  response.json(successResponse(bins));
+// Storage bins
+export async function listStorageBins(_req: Request, res: Response) {
+  res.json(ok(await service.listStorageBins()));
 }
 
-export async function createStorageBin(request: Request, response: Response) {
-  const { binCode, zone, capacity } = request.body;
-  const [createdBin] = await database
-    .insert(storageBins)
-    .values({ binCode, zone, capacity })
-    .returning();
-  response.status(201).json(successResponse(createdBin));
+export async function createStorageBin(req: Request, res: Response) {
+  res.status(201).json(ok(await service.createStorageBin(req.body)));
 }
 
-// ----- Putaway Tasks -----
-
-export async function listPutawayTasks(_request: Request, response: Response) {
-  const tasks = await database.select().from(putawayTasks);
-  response.json(successResponse(tasks));
+// Putaway tasks
+export async function listPutawayTasks(_req: Request, res: Response) {
+  res.json(ok(await service.listPutawayTasks()));
 }
 
-export async function completePutawayTask(request: Request, response: Response) {
-  const { assignedBinId } = request.body;
+export async function completePutawayTask(req: Request, res: Response) {
+  const { assignedBinId } = req.body;
+  const completed = await service.completePutawayTask(
+    req.params.id,
+    assignedBinId
+  );
 
-  const [completedTask] = await database
-    .update(putawayTasks)
-    .set({ status: 'COMPLETED', assignedBinId })
-    .where(eq(putawayTasks.id, request.params.id))
-    .returning();
-
-  if (!completedTask) {
-    return response.status(404).json(errorResponse('Putaway task not found'));
+  if (!completed) {
+    return res.status(404).json(fail('Putaway task not found'));
   }
 
-  response.json(successResponse(completedTask));
+  res.json(ok(completed));
 }
 
-// ----- Pick Tasks -----
-
-export async function listPickTasks(_request: Request, response: Response) {
-  const tasks = await database.select().from(pickTasks);
-  response.json(successResponse(tasks));
+// Pick tasks
+export async function listPickTasks(_req: Request, res: Response) {
+  res.json(ok(await service.listPickTasks()));
 }
 
-export async function createPickTask(request: Request, response: Response) {
-  const { productCode, quantity, fromBinId } = request.body;
-  const [createdTask] = await database
-    .insert(pickTasks)
-    .values({ productCode, quantity, fromBinId })
-    .returning();
-  response.status(201).json(successResponse(createdTask));
+export async function createPickTask(req: Request, res: Response) {
+  res.status(201).json(ok(await service.createPickTask(req.body)));
 }
 
-// ----- Stock Transfers -----
-
-export async function listStockTransfers(_request: Request, response: Response) {
-  const transfers = await database.select().from(stockTransfers);
-  response.json(successResponse(transfers));
+// Stock transfers
+export async function listStockTransfers(_req: Request, res: Response) {
+  res.json(ok(await service.listStockTransfers()));
 }
 
-export async function createStockTransfer(request: Request, response: Response) {
-  const { productCode, fromLocation, toLocation, quantity } = request.body;
-  const [createdTransfer] = await database
-    .insert(stockTransfers)
-    .values({ productCode, fromLocation, toLocation, quantity })
-    .returning();
-  response.status(201).json(successResponse(createdTransfer));
+export async function createStockTransfer(req: Request, res: Response) {
+  res.status(201).json(ok(await service.createStockTransfer(req.body)));
 }
