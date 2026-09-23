@@ -8,7 +8,6 @@ import {
 } from '../infrastructure/schema.js';
 
 export const repository = {
-  // Storage bins
   listStorageBins() {
     return database.select().from(storageBins);
   },
@@ -21,7 +20,6 @@ export const repository = {
     return database.insert(storageBins).values(values).returning();
   },
 
-  // Putaway tasks
   listPutawayTasks() {
     return database.select().from(putawayTasks);
   },
@@ -45,7 +43,6 @@ export const repository = {
       .returning();
   },
 
-  // Pick tasks
   listPickTasks() {
     return database.select().from(pickTasks);
   },
@@ -58,7 +55,6 @@ export const repository = {
     return database.insert(pickTasks).values(values).returning();
   },
 
-  // Stock transfers
   listStockTransfers() {
     return database.select().from(stockTransfers);
   },

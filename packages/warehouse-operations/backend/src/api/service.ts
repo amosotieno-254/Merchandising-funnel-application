@@ -1,7 +1,6 @@
 import { repository } from './repository.js';
 
 export const service = {
-  // Storage bins
   listStorageBins() {
     return repository.listStorageBins();
   },
@@ -15,7 +14,6 @@ export const service = {
     return created;
   },
 
-  // Putaway tasks
   listPutawayTasks() {
     return repository.listPutawayTasks();
   },
@@ -40,7 +38,6 @@ export const service = {
     );
   },
 
-  // Pick tasks
   listPickTasks() {
     return repository.listPickTasks();
   },
@@ -54,7 +51,6 @@ export const service = {
     return created;
   },
 
-  // Stock transfers
   listStockTransfers() {
     return repository.listStockTransfers();
   },

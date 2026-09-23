@@ -5,7 +5,7 @@ import {
   createSupplier,
   addSupplierProduct,
   listSupplierProducts,
-} from './controllers.js';
+} from './vendorControllers.js';
 
 export const vendorRouter = Router();
 
