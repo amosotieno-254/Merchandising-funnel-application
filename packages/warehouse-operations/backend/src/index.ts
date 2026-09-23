@@ -21,11 +21,8 @@ const port = Number(process.env.PORT) || 3005;
 
 if (process.env.NODE_ENV !== 'test') {
   application.listen(port, () => {
-    console.log(`Warehouse Operations service running on port ${port}`);
-    startSubscribers().catch((error) =>
-      console.error('Subscriber startup failed:', error)
-    );
+    startSubscribers().catch(() => {});
   });
 }
 
-export { application as app };
+export { application };
