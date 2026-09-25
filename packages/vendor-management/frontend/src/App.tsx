@@ -28,7 +28,7 @@ const NAV: { id: View; label: string; icon: string }[] = [
 ];
 
 const money = (n: number) =>
-  n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+  n.toLocaleString('en-KE', { style: 'currency', currency: 'KES' });
 
 async function api<T>(path: string, body?: unknown): Promise<T> {
   const r = await fetch(`${API}${path}`, {
