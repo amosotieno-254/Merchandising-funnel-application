@@ -1,6 +1,7 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { type ErrorRequestHandler } from 'express';
 import cors from 'cors';
+import { fail } from '@mms/shared';
 import { receivingRouter } from './api/routes.js';
 import { featureFlags } from './config/feature-flags.js';
 import { startSubscribers } from './events/subscriber.js';
@@ -17,11 +18,23 @@ if (featureFlags.receiving) {
   );
 }
 
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json(fail('Invalid JSON body'));
+  }
+  console.error('[receiving] request failed:', err);
+  res.status(500).json(fail('Internal server error'));
+};
+app.use(errorHandler);
+
 const port = Number(process.env.PORT) || 3004;
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(port, () => {
-    startSubscribers().catch(() => {});
+    console.log(`Receiving service listening on port ${port}`);
+    startSubscribers().catch((err) =>
+      console.error('[receiving] failed to start subscribers:', err)
+    );
   });
 }
 

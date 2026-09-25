@@ -1,4 +1,3 @@
-import { clear } from 'console';
 import { pgTable, uuid, text, integer, timestamp } from 'drizzle-orm/pg-core';
 
 export const expectedDeliveries = pgTable('expected_deliveries', {
