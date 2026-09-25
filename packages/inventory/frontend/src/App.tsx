@@ -24,7 +24,7 @@ const NAV: { id: View; label: string; icon: string }[] = [
 ];
 
 const money = (n: number) =>
-  n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+  n.toLocaleString('en-KE', { style: 'currency', currency: 'KES' });
 
 function currentView(): View {
   const h = window.location.hash.replace('#', '') as View;

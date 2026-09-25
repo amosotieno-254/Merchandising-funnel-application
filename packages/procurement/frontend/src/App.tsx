@@ -31,7 +31,7 @@ const NAV: { id: View; label: string; icon: string }[] = [
 ];
 
 const money = (n: number) =>
-  n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+  n.toLocaleString('en-KE', { style: 'currency', currency: 'KES' });
 
 const short = (id: string) => `${id.slice(0, 8)}…`;
 
