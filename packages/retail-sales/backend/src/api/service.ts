@@ -1,6 +1,6 @@
 import { repository } from './repository.js';
 import { publishItemSold } from '../events/publisher.js';
-import { checkAvailability } from '../grpc/inventoryClient.js';
+import { checkStockAvailability } from '../grpc/inventoryClient.js';
 
 export const service = {
   listSales() {
@@ -28,16 +28,17 @@ export const service = {
       discount?: string;
     }>;
   }) {
+    // Check stock for every line via gRPC before creating the sale.
     for (const line of input.lines) {
-      const availability = await checkAvailability(
-        line.productCode,
-        input.location,
-        line.quantity
-      );
+      const availability = await checkStockAvailability({
+        productCode: line.productCode,
+        location: input.location,
+        quantity: line.quantity,
+      });
 
       if (!availability.available) {
         return {
-          error: `Insufficient stock for ${line.productCode} at ${input.location}: requested ${line.quantity}, available ${availability.onHand - availability.allocated}`,
+          error: `Insufficient stock for ${line.productCode} at ${input.location}: requested ${line.quantity}, available ${availability.availableQuantity}`,
         };
       }
     }

@@ -1,0 +1,161 @@
+openapi: 3.0.3
+info:
+  title: Retail Sales Service
+  version: 1.0.0
+  description: |
+    The point-of-sale transaction engine. Provides retail prices and
+    promotions, validates stock availability via gRPC to Inventory,
+    processes sales and returns, and publishes ItemSold events.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://pos.mms.internal
+    description: Production
+  - url: http://localhost:3006
+    description: Local development
+security: []
+tags:
+  - name: Sales
+    description: Point-of-sale transactions
+paths:
+  /api/v1/sales:
+    get:
+      summary: List all sales
+      operationId: listSales
+      tags: [Sales]
+      responses:
+        '200':
+          description: A list of sales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleListResponse'
+        '4XX':
+          description: Client error
+    post:
+      summary: Create a sale
+      description: |
+        Validates stock via a synchronous gRPC call to the Inventory Service
+        before creating the sale. Publishes an ItemSold event on success.
+      operationId: createSale
+      tags: [Sales]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSaleRequest'
+      responses:
+        '201':
+          description: Sale created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleResponse'
+        '400':
+          description: Invalid input or insufficient stock
+        '4XX':
+          description: Client error
+  /api/v1/sales/{id}:
+    get:
+      summary: Get a sale with its line items
+      operationId: getSale
+      tags: [Sales]
+      parameters:
+        - $ref: '#/components/parameters/SaleId'
+      responses:
+        '200':
+          description: Sale with lines
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleWithLinesResponse'
+        '404':
+          description: Sale not found
+        '4XX':
+          description: Client error
+components:
+  parameters:
+    SaleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Sale:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        displayId: { type: string, example: "SALE-3K7A" }
+        registerId: { type: string, example: "REG-0001" }
+        storeId: { type: string, example: "STORE-1" }
+        cashierId: { type: string, example: "Alice" }
+        totalAmount: { type: string, example: "240.00" }
+        paymentMethod:
+          type: string
+          enum: [CASH, CARD, MIXED]
+        status:
+          type: string
+          enum: [COMPLETED, REFUNDED]
+        createdAt: { type: string, format: date-time }
+    SaleLine:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        saleId: { type: string, format: uuid }
+        productCode: { type: string }
+        quantity: { type: integer }
+        unitPrice: { type: string, example: "120.00" }
+        discount: { type: string, example: "0.00" }
+        lineTotal: { type: string, example: "240.00" }
+    CreateSaleLine:
+      type: object
+      required: [productCode, quantity, unitPrice]
+      properties:
+        productCode: { type: string, example: "SKU-100" }
+        quantity: { type: integer, minimum: 1 }
+        unitPrice: { type: string, example: "120.00" }
+        discount: { type: string, example: "0.00" }
+    CreateSaleRequest:
+      type: object
+      required: [registerId, storeId, cashierId, paymentMethod, location, lines]
+      properties:
+        registerId: { type: string, example: "REG-0001" }
+        storeId: { type: string, example: "STORE-1" }
+        cashierId: { type: string, example: "Alice" }
+        paymentMethod:
+          type: string
+          enum: [CASH, CARD, MIXED]
+        location: { type: string, example: "MAIN_WAREHOUSE" }
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateSaleLine'
+    SaleResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/Sale' }
+    SaleListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Sale' }
+    SaleWithLinesResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Sale'
+            - type: object
+              properties:
+                lines:
+                  type: array
+                  items: { $ref: '#/components/schemas/SaleLine' }

@@ -16,4 +16,6 @@ message CheckAvailabilityResponse {
   bool available = 1;
   int32 on_hand = 2;
   int32 allocated = 3;
+  int32 available_quantity = 4;
+  string message = 5;
 }

@@ -1,90 +1,51 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-const API = 'http://localhost:3006/api/v1';
+const API = "http://localhost:3006/api/v1";
 
-interface CartLine {
+type SaleLine = {
   productCode: string;
   quantity: number;
   unitPrice: string;
-  discount: string;
-}
+};
 
-interface Sale {
+type Sale = {
   id: string;
-  registerId: string;
-  storeId: string;
-  cashierId: string;
+  displayId: string;
+  registerDisplayId: string;
+  cashierName: string;
+  paymentMethod: "CASH" | "CARD" | "MIXED";
   totalAmount: string;
-  paymentMethod: string;
-  status?: string;
+  lines: SaleLine[];
   createdAt: string;
-}
+};
 
-interface Register {
-  registerId: string;
-  storeId: string;
-  cashierId: string;
-  location: string;
-}
-
-type View = 'terminal' | 'history' | 'settings';
+type View = "terminal" | "sales";
 
 const NAV: { id: View; label: string; icon: string }[] = [
-  { id: 'terminal', label: 'Terminal', icon: '▦' },
-  { id: 'history', label: 'Sales History', icon: '≡' },
-  { id: 'settings', label: 'Register', icon: '⚙' },
+  { id: "terminal", label: "Terminal", icon: "▣" },
+  { id: "sales", label: "Sales History", icon: "☰" },
 ];
 
-const PAYMENTS = ['CASH', 'CARD', 'MPESA'];
-
-const kes = (n: number | string) =>
-  Number(n).toLocaleString('en-KE', { style: 'currency', currency: 'KES' });
-
-async function api<T>(path: string, body?: unknown): Promise<T> {
-  const r = await fetch(`${API}${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    cache: 'no-store',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const res = await r.json().catch(() => ({}));
-  if (!r.ok || res.success === false) throw new Error(res.error ?? `Request failed (${r.status})`);
-  return res.data as T;
-}
-
-function currentView(): View {
-  const h = window.location.hash.replace('#', '') as View;
-  return NAV.some((n) => n.id === h) ? h : 'terminal';
-}
-
-const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
+const money = (n: number) =>
+  n.toLocaleString("en-KE", { style: "currency", currency: "KES" });
 
 export default function App() {
-  const [view, setView] = useState<View>(currentView);
+  const [view, setView] = useState<View>("terminal");
   const [sales, setSales] = useState<Sale[]>([]);
-  const [register, setRegister] = useState<Register>({
-    registerId: 'REG-01',
-    storeId: 'STORE-3',
-    cashierId: 'CASHIER-01',
-    location: 'MAIN_WAREHOUSE',
-  });
   const [loading, setLoading] = useState(true);
-  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [message, setMessage] = useState("");
 
   const load = useCallback(async () => {
-    const started = Date.now();
     setLoading(true);
     setError(null);
     try {
-      setSales(await api<Sale[]>('/sales'));
-      setUpdatedAt(new Date());
+      const response = await fetch(`${API}/sales`).then((r) => r.json());
+      setSales(response.data ?? []);
     } catch {
-      setError('Could not reach the retail sales service on port 3006.');
+      setError("Could not reach the retail sales service on port 3006.");
     } finally {
-      // Keep the loading state visible long enough to register as a refresh.
-      await new Promise((r) => setTimeout(r, Math.max(0, 400 - (Date.now() - started))));
       setLoading(false);
     }
   }, []);
@@ -93,35 +54,32 @@ export default function App() {
     load();
   }, [load]);
 
-  useEffect(() => {
-    const onHash = () => setView(currentView());
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
-
   const go = (v: View) => {
-    window.location.hash = v;
     setView(v);
     setMenuOpen(false);
   };
 
-  const title = NAV.find((n) => n.id === view)?.label;
+  const todayTotal = useMemo(
+    () =>
+      sales.reduce((sum, s) => sum + Number(s.totalAmount), 0),
+    [sales]
+  );
 
   return (
     <div className="layout">
-      <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
         <div className="brand">
-          <span className="logo">◧</span>
+          <span className="logo">▣</span>
           <div>
-            <strong>Retail POS</strong>
-            <small>Checkout Terminal</small>
+            <strong>Retail Sales</strong>
+            <small>Point of Sale</small>
           </div>
         </div>
         <nav>
           {NAV.map((n) => (
             <button
               key={n.id}
-              className={`nav-btn ${view === n.id ? 'active' : ''}`}
+              className={`nav-btn ${view === n.id ? "active" : ""}`}
               onClick={() => go(n.id)}
             >
               <span className="nav-icon">{n.icon}</span>
@@ -129,11 +87,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">
-          {register.registerId} · {register.cashierId}
-          <br />
-          API: localhost:3006
-        </div>
+        <div className="sidebar-foot">API: localhost:3006</div>
       </aside>
 
       <div className="main">
@@ -141,64 +95,107 @@ export default function App() {
           <button className="menu-btn" onClick={() => setMenuOpen((o) => !o)}>
             ☰
           </button>
-          <h1>{title}</h1>
-          {updatedAt && <small className="muted">Updated {updatedAt.toLocaleTimeString()}</small>}
+          <h1>{NAV.find((n) => n.id === view)?.label}</h1>
           <button className="btn ghost" onClick={load} disabled={loading}>
-            {loading ? 'Refreshing…' : '⟳ Refresh'}
+            {loading ? "Loading…" : "⟳ Refresh"}
           </button>
         </header>
 
         <main className="content">
           {error && <div className="alert error">{error}</div>}
-          {view === 'terminal' && <Terminal sales={sales} register={register} onDone={load} />}
-          {view === 'history' && <History sales={sales} />}
-          {view === 'settings' && <Settings register={register} setRegister={setRegister} />}
+          {message && <div className="alert ok">{message}</div>}
+
+          {view === "terminal" && (
+            <TerminalView onDone={load} setMessage={setMessage} todayTotal={todayTotal} saleCount={sales.length} />
+          )}
+
+          {view === "sales" && <SalesTable sales={sales} />}
         </main>
       </div>
     </div>
   );
 }
 
-function Terminal({ sales, register, onDone }: { sales: Sale[]; register: Register; onDone: () => void }) {
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [f, setF] = useState({ productCode: '', quantity: '1', unitPrice: '' });
-  const [payment, setPayment] = useState('CASH');
-  const [status, setStatus] = useState<{ kind: 'ok' | 'error'; msg: string } | null>(null);
+function TerminalView({
+  onDone,
+  setMessage,
+  todayTotal,
+  saleCount,
+}: {
+  onDone: () => void;
+  setMessage: (m: string) => void;
+  todayTotal: number;
+  saleCount: number;
+}) {
+  const [registerDisplayId, setRegisterDisplayId] = useState("REG-0001");
+  const [cashierName, setCashierName] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "MIXED">("CASH");
+  const [basket, setBasket] = useState<SaleLine[]>([]);
+  const [productCode, setProductCode] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [unitPrice, setUnitPrice] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const today = sales.filter((s) => isToday(s.createdAt));
-  const revenue = today.reduce((a, s) => a + Number(s.totalAmount), 0);
-  const items = cart.reduce((a, l) => a + l.quantity, 0);
-  const total = cart.reduce((a, l) => a + Number(l.unitPrice) * l.quantity - Number(l.discount), 0);
-
-  const add = (e: { preventDefault(): void }) => {
-    e.preventDefault();
-    const code = f.productCode.trim().toUpperCase();
-    const qty = Number(f.quantity);
-    const price = Number(f.unitPrice).toFixed(2);
-    const existing = cart.findIndex((l) => l.productCode === code && l.unitPrice === price);
-    if (existing >= 0) {
-      setQty(existing, cart[existing].quantity + qty);
-    } else {
-      setCart([...cart, { productCode: code, quantity: qty, unitPrice: price, discount: '0.00' }]);
+  const addLine = () => {
+    if (!productCode || !quantity || !unitPrice) {
+      setMessage("Fill product code, quantity, and unit price.");
+      return;
     }
-    setF({ productCode: '', quantity: '1', unitPrice: '' });
-    setStatus(null);
+    setBasket([
+      ...basket,
+      {
+        productCode: productCode.trim(),
+        quantity: Number(quantity),
+        unitPrice,
+      },
+    ]);
+    setProductCode("");
+    setQuantity("1");
+    setUnitPrice("");
+    setMessage("");
   };
 
-  const setQty = (i: number, q: number) =>
-    setCart((c) => (q <= 0 ? c.filter((_, j) => j !== i) : c.map((l, j) => (j === i ? { ...l, quantity: q } : l))));
+  const removeLine = (index: number) => {
+    setBasket(basket.filter((_, i) => i !== index));
+  };
 
-  const charge = async () => {
+  const total = basket.reduce(
+    (sum, l) => sum + Number(l.unitPrice) * l.quantity,
+    0
+  );
+
+  const completeSale = async () => {
+    if (basket.length === 0) {
+      setMessage("Basket is empty.");
+      return;
+    }
+    if (!cashierName) {
+      setMessage("Enter the cashier name.");
+      return;
+    }
+
     setBusy(true);
-    setStatus(null);
     try {
-      const sale = await api<Sale>('/sales', { ...register, paymentMethod: payment, lines: cart });
-      setStatus({ kind: 'ok', msg: `Sale ${sale.id.slice(0, 8)} completed · ${kes(sale.totalAmount)} via ${payment}.` });
-      setCart([]);
-      onDone();
-    } catch (err) {
-      setStatus({ kind: 'error', msg: (err as Error).message });
+      const response = await fetch(`${API}/sales`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          registerDisplayId,
+          cashierName,
+          paymentMethod,
+          lines: basket,
+        }),
+      });
+      const json = await response.json();
+      if (json.success) {
+        setMessage(`Sale ${json.data.displayId} completed — ${money(total)}.`);
+        setBasket([]);
+        onDone();
+      } else {
+        setMessage(`Failed: ${json.error}`);
+      }
+    } catch {
+      setMessage("Could not complete sale.");
     } finally {
       setBusy(false);
     }
@@ -207,193 +204,183 @@ function Terminal({ sales, register, onDone }: { sales: Sale[]; register: Regist
   return (
     <>
       <div className="cards">
-        <Card label="Sales today" value={today.length} />
-        <Card label="Revenue today" value={kes(revenue)} />
-        <Card label="Avg. basket" value={kes(today.length ? revenue / today.length : 0)} />
-        <Card label="All-time sales" value={sales.length} />
+        <div className="card">
+          <span className="muted">Today's sales</span>
+          <strong>{saleCount}</strong>
+        </div>
+        <div className="card">
+          <span className="muted">Today's revenue</span>
+          <strong>{money(todayTotal)}</strong>
+        </div>
+        <div className="card">
+          <span className="muted">Basket total</span>
+          <strong>{money(total)}</strong>
+        </div>
       </div>
 
-      <div className="pos">
-        <div className="stack">
-          <section className="panel">
-            <h2>Scan item</h2>
-            <form onSubmit={add} className="line-row">
-              <Field label="Product code" placeholder="e.g. SKU-1001" autoFocus value={f.productCode} onChange={(v) => setF({ ...f, productCode: v })} />
-              <Field label="Qty" type="number" min="1" value={f.quantity} onChange={(v) => setF({ ...f, quantity: v })} />
-              <Field label="Unit price (KES)" type="number" min="0" step="0.01" value={f.unitPrice} onChange={(v) => setF({ ...f, unitPrice: v })} />
-              <button className="btn primary">+ Add</button>
-            </form>
-          </section>
+      <div className="grid-2">
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Basket</h2>
+          </div>
 
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Cart</h2>
-              {cart.length > 0 && (
-                <button className="btn sm ghost" onClick={() => setCart([])}>Clear</button>
-              )}
-            </div>
+          {basket.length === 0 ? (
+            <p className="muted">No items yet.</p>
+          ) : (
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
                     <th>Product</th>
-                    <th>Qty</th>
-                    <th className="num">Price</th>
-                    <th className="num">Total</th>
+                    <th className="num">Qty</th>
+                    <th className="num">Unit price (KSH)</th>
+                    <th className="num">Subtotal</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {cart.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="empty">Cart is empty. Scan an item to start a sale.</td>
-                    </tr>
-                  )}
-                  {cart.map((l, i) => (
-                    <tr key={`${l.productCode}-${l.unitPrice}`}>
+                  {basket.map((l, i) => (
+                    <tr key={i}>
                       <td><strong>{l.productCode}</strong></td>
-                      <td>
-                        <span className="qty">
-                          <button className="btn sm" onClick={() => setQty(i, l.quantity - 1)}>−</button>
-                          <span className="mono">{l.quantity}</span>
-                          <button className="btn sm" onClick={() => setQty(i, l.quantity + 1)}>+</button>
-                        </span>
-                      </td>
-                      <td className="num">{kes(l.unitPrice)}</td>
-                      <td className="num">{kes(Number(l.unitPrice) * l.quantity)}</td>
+                      <td className="num">{l.quantity}</td>
+                      <td className="num">{money(Number(l.unitPrice))}</td>
+                      <td className="num">{money(Number(l.unitPrice) * l.quantity)}</td>
                       <td className="num">
-                        <button className="x" title="Remove" onClick={() => setQty(i, 0)}>✕</button>
+                        <button className="btn sm" onClick={() => removeLine(i)}>✕</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </section>
-        </div>
+          )}
+        </section>
 
         <section className="panel">
-          <div className="lcd">
-            <small>
-              <span>{register.registerId}</span>
-              <span>Total due</span>
-            </small>
-            <strong>{kes(total)}</strong>
+          <div className="panel-head">
+            <h2>Add Item</h2>
           </div>
-          <div className="totals">
-            <div><span className="muted">Lines</span><span className="mono">{cart.length}</span></div>
-            <div><span className="muted">Items</span><span className="mono">{items}</span></div>
+
+          <div className="form">
+            <label className="field">
+              <span>Product code</span>
+              <input
+                value={productCode}
+                onChange={(e) => setProductCode(e.target.value)}
+                placeholder="e.g. SKU-001"
+              />
+            </label>
+            <div className="row">
+              <label className="field">
+                <span>Quantity</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Unit price (KSH)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={unitPrice}
+                  onChange={(e) => setUnitPrice(e.target.value)}
+                />
+              </label>
+            </div>
+            <button className="btn" onClick={addLine}>+ Add to basket</button>
           </div>
-          <h2>Payment</h2>
-          <div className="pay" style={{ marginBottom: 16 }}>
-            {PAYMENTS.map((p) => (
-              <button key={p} className={`btn ${payment === p ? 'active' : ''}`} onClick={() => setPayment(p)}>
-                {p}
-              </button>
-            ))}
-          </div>
-          {status && <div className={`alert ${status.kind}`} style={{ marginBottom: 12 }}>{status.msg}</div>}
-          <button className="btn primary charge" disabled={busy || cart.length === 0} onClick={charge}>
-            {busy ? 'Processing…' : `Charge ${kes(total)}`}
-          </button>
-          <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
-            Stock is checked with Inventory at {register.location} before the sale is finalised.
-          </p>
         </section>
       </div>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Checkout</h2>
+        </div>
+
+        <div className="form">
+          <div className="row">
+            <label className="field">
+              <span>Register</span>
+              <input
+                value={registerDisplayId}
+                onChange={(e) => setRegisterDisplayId(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Cashier</span>
+              <input
+                value={cashierName}
+                onChange={(e) => setCashierName(e.target.value)}
+                placeholder="Your name"
+              />
+            </label>
+            <label className="field">
+              <span>Payment method</span>
+              <select
+                value={paymentMethod}
+                onChange={(e) =>
+                  setPaymentMethod(e.target.value as "CASH" | "CARD" | "MIXED")
+                }
+              >
+                <option value="CASH">Cash</option>
+                <option value="CARD">Card</option>
+                <option value="MIXED">Mixed</option>
+              </select>
+            </label>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <strong style={{ fontSize: 24 }}>Total: {money(total)}</strong>
+            <button className="btn primary" onClick={completeSale} disabled={busy}>
+              {busy ? "Processing…" : "Complete Sale"}
+            </button>
+          </div>
+        </div>
+      </section>
     </>
   );
 }
 
-function History({ sales }: { sales: Sale[] }) {
-  const [q, setQ] = useState('');
-  const rows = [...sales]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .filter((s) => `${s.id} ${s.registerId} ${s.cashierId} ${s.paymentMethod}`.toLowerCase().includes(q.toLowerCase()));
-
+function SalesTable({ sales }: { sales: Sale[] }) {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>Sales history</h2>
-        <input className="search" placeholder="Search sale, register, cashier…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <h2>Sales History</h2>
       </div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Sale</th>
-              <th>Register</th>
-              <th>Cashier</th>
-              <th>Payment</th>
-              <th className="num">Total</th>
-              <th className="num">When</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
+      {sales.length === 0 ? (
+        <p className="muted">No sales yet.</p>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={6} className="empty">No sales yet.</td>
+                <th>Sale</th>
+                <th>Register</th>
+                <th>Cashier</th>
+                <th>Payment</th>
+                <th className="num">Total (KSH)</th>
+                <th>When</th>
               </tr>
-            )}
-            {rows.map((s) => (
-              <tr key={s.id}>
-                <td className="mono">{s.id.slice(0, 8)}</td>
-                <td>{s.registerId}</td>
-                <td>{s.cashierId}</td>
-                <td><span className="badge info">{s.paymentMethod}</span></td>
-                <td className="num">{kes(s.totalAmount)}</td>
-                <td className="num">{new Date(s.createdAt).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function Settings({ register, setRegister }: { register: Register; setRegister: (r: Register) => void }) {
-  const set = (k: keyof Register) => (v: string) => setRegister({ ...register, [k]: v });
-  return (
-    <section className="panel narrow">
-      <h2>Register settings</h2>
-      <div className="form">
-        <div className="row">
-          <Field label="Register ID" value={register.registerId} onChange={set('registerId')} />
-          <Field label="Store" value={register.storeId} onChange={set('storeId')} />
+            </thead>
+            <tbody>
+              {sales.map((s) => (
+                <tr key={s.id}>
+                  <td><strong>{s.displayId}</strong></td>
+                  <td>{s.registerDisplayId}</td>
+                  <td>{s.cashierName}</td>
+                  <td><span className="badge info">{s.paymentMethod}</span></td>
+                  <td className="num">{money(Number(s.totalAmount))}</td>
+                  <td>{new Date(s.createdAt).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <Field label="Cashier" value={register.cashierId} onChange={set('cashierId')} />
-        <Field label="Inventory location" value={register.location} onChange={set('location')} />
-        <p className="muted" style={{ fontSize: 13 }}>Changes apply to the next sale on this terminal.</p>
-      </div>
+      )}
     </section>
-  );
-}
-
-function Card({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
-  return (
-    <div className="card">
-      <span className="muted">{label}</span>
-      <strong>{value}</strong>
-      {sub && <small className="muted">{sub}</small>}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  ...rest
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <input required value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
-    </label>
   );
 }

@@ -4,6 +4,7 @@ import cors from 'cors';
 import { inventoryRouter } from './api/routes.js';
 import { featureFlags } from './config/feature-flags.js';
 import { startGrpcServer } from './grpc/server.js';
+import { startSubscribers } from './events/subscriber.js';
 
 const app = express();
 app.use(cors());
@@ -23,7 +24,8 @@ if (process.env.NODE_ENV !== 'test') {
   app.listen(port, () =>
     console.log(`Inventory service running on port ${port}`)
   );
-  startGrpcServer(`0.0.0.0:${Number(process.env.GRPC_PORT) || 50051}`);
-}
+  startGrpcServer();
+  startSubscribers().catch(() => {});
+   };
 
 export { app };

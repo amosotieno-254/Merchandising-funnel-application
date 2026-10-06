@@ -2,12 +2,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
-import { repository } from '../api/repository.js';
+import { service } from '../api/service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROTO_PATH = path.resolve(__dirname, '../../../../../contracts/proto/inventory.proto');
+const protoPath = path.resolve(
+  __dirname,
+  '../../../../../contracts/proto/inventory.proto'
+);
 
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+const packageDefinition = protoLoader.loadSync(protoPath, {
   keepCase: true,
   longs: String,
   enums: String,
@@ -15,36 +18,48 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   oneofs: true,
 });
 
-const proto: any = grpc.loadPackageDefinition(packageDefinition);
+const inventoryProto = grpc.loadPackageDefinition(packageDefinition) as any;
 
-async function checkAvailability(call: any, callback: grpc.sendUnaryData<any>) {
+async function checkAvailability(
+  call: grpc.ServerUnaryCall<any, any>,
+  callback: grpc.sendUnaryData<any>
+) {
   try {
     const { product_code, location, quantity } = call.request;
-    const [item] = await repository.findStockByProductAndLocation(product_code, location);
-    const onHand = item?.onHand ?? 0;
-    const allocated = item?.allocated ?? 0;
+
+    const available = await service.getAvailableQuantity(product_code, location);
+
     callback(null, {
-      available: onHand - allocated >= quantity,
-      on_hand: onHand,
-      allocated,
+      available: available >= quantity,
+      on_hand: available,
+      allocated: 0,
+      available_quantity: available,
+      message: available >= quantity ? 'In stock' : 'Insufficient stock',
     });
-  } catch (err) {
-    console.error('CheckAvailability failed:', err);
-    callback({ code: grpc.status.INTERNAL, message: 'Stock lookup failed' });
+  } catch (error) {
+    callback({
+      code: grpc.status.INTERNAL,
+      message: (error as Error).message,
+    });
   }
 }
 
-export function startGrpcServer(address: string) {
+export function startGrpcServer(port = 50051) {
   const server = new grpc.Server();
-  server.addService(proto.inventory.InventoryService.service, {
+
+  server.addService(inventoryProto.inventory.InventoryService.service, {
     CheckAvailability: checkAvailability,
   });
-  server.bindAsync(address, grpc.ServerCredentials.createInsecure(), (err, port) => {
-    if (err) {
-      console.error('Inventory gRPC server failed to start:', err);
-      return;
+
+  server.bindAsync(
+    `0.0.0.0:${port}`,
+    grpc.ServerCredentials.createInsecure(),
+    (error, boundPort) => {
+      if (error) {
+        console.error('gRPC server failed to start:', error);
+        return;
+      }
+      console.log(`Inventory gRPC server listening on port ${boundPort}`);
     }
-    console.log(`Inventory gRPC server running on port ${port}`);
-  });
-  return server;
+  );
 }
