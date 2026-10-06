@@ -76,6 +76,19 @@ services:
       - "5438:5432"
     volumes:
       - pos-data:/var/lib/postgresql/data
+
+  audit-db:
+    image: postgres:16
+    container_name: mms-audit-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: audit
+      POSTGRES_PASSWORD: audit
+      POSTGRES_DB: audit_db
+    ports:
+      - "5439:5432"
+    volumes:
+      - audit-data:/var/lib/postgresql/data
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: mms-rabbitmq
@@ -97,3 +110,4 @@ volumes:
   rabbitmq-data:
   warehouse-data:
   pos-data:
+  audit-data:
