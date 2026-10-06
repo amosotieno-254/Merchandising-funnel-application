@@ -10,7 +10,8 @@
     "packages/receiving/backend",
     "packages/warehouse-operations/backend",
     "packages/retail-sales/backend",
-    "packages/sales-audit/backend" 
+    "packages/sales-audit/backend" ,
+    "packages/financials/backend"
 
 
   ],
@@ -22,6 +23,7 @@
     "dev:warehouse": "npm --workspace @mms/warehouse-operations-backend run dev",
     "dev:pos": "npm --workspace @mms/retail-sales-backend run dev",
     "dev:audit": "npm --workspace @mms/sales-audit-backend run dev" ,
+    "dev:financials": "npm --workspace @mms/financials-backend run dev",
 
 
     "build": "npm run build --workspaces --if-present",

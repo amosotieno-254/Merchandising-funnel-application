@@ -1,0 +1,28 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import { financialsRouter } from './api/routes.js';
+import { featureFlags } from './config/feature-flags.js';
+import { startSubscribers } from './events/subscriber.js';
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+if (featureFlags.financials) {
+  app.use('/api/v1', financialsRouter);
+} else {
+  app.use('/api/v1', (_request, response) =>
+    response.status(503).json({ success: false, error: 'Module disabled' })
+  );
+}
+
+const port = Number(process.env.PORT) || 3008;
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(port, () => {
+    startSubscribers().catch(() => {});
+  });
+}
+
+export { app };

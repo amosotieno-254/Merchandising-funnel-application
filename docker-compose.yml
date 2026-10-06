@@ -89,6 +89,19 @@ services:
       - "5439:5432"
     volumes:
       - audit-data:/var/lib/postgresql/data
+
+  financials-db:
+    image: postgres:16
+    container_name: mms-financials-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: financials
+      POSTGRES_PASSWORD: financials
+      POSTGRES_DB: financials_db
+    ports:
+      - "5440:5432"
+    volumes:
+      - financials-data:/var/lib/postgresql/data
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: mms-rabbitmq
@@ -111,3 +124,4 @@ volumes:
   warehouse-data:
   pos-data:
   audit-data:
+  financials-data:
