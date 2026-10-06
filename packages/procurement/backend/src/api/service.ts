@@ -1,5 +1,6 @@
 import { repository } from './repository.js';
 import { publishPurchaseOrderApproved } from '../events/publisher.js';
+import { generatePurchaseOrderDisplayId } from './displayId.js';
 
 export const service = {
   listPurchaseOrders() {
@@ -28,6 +29,7 @@ export const service = {
       .toFixed(2);
 
     const [po] = await repository.insertPurchaseOrder({
+      displayId:generatePurchaseOrderDisplayId(),
       supplierId: input.supplierId,
       paymentTerms: input.paymentTerms,
       totalCost,
@@ -58,6 +60,7 @@ export const service = {
 
     await publishPurchaseOrderApproved({
       purchaseOrderId: approved.id,
+      displayId:approved.displayId,
       supplierId: approved.supplierId,
       totalCost: approved.totalCost,
       paymentTerms: approved.paymentTerms,

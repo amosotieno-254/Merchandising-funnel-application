@@ -2,6 +2,7 @@ import { pgTable, uuid, text, numeric, integer, timestamp } from 'drizzle-orm/pg
 
 export const purchaseOrders = pgTable('purchase_orders', {
   id: uuid('id').primaryKey().defaultRandom(),
+  displayId:text('display_id').notNull(),
   supplierId: uuid('supplier_id').notNull(),
   status: text('status').notNull().default('DRAFT'),
   paymentTerms: text('payment_terms').notNull(),
