@@ -64,6 +64,18 @@ services:
     volumes:
       - warehouse-data:/var/lib/postgresql/data
 
+  pos-db:
+    image: postgres:16
+    container_name: mms-pos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pos
+      POSTGRES_PASSWORD: pos
+      POSTGRES_DB: pos_db
+    ports:
+      - "5438:5432"
+    volumes:
+      - pos-data:/var/lib/postgresql/data
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: mms-rabbitmq
@@ -84,3 +96,4 @@ volumes:
   receiving-data:
   rabbitmq-data:
   warehouse-data:
+  pos-data:
