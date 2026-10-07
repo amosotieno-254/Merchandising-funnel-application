@@ -2,6 +2,7 @@ import { publishEvent } from '@mms/shared';
 
 export interface PurchaseOrderApprovedPayload {
   purchaseOrderId: string;
+  displayId:string ,
   supplierId: string;
   totalCost: string;
   paymentTerms: string;

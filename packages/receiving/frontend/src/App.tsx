@@ -57,6 +57,7 @@ function parseLines(raw: string): DeliveryLine[] {
 async function api<T>(path: string, body?: unknown): Promise<T> {
   const r = await fetch(`${API}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
+    cache: 'no-store',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -76,10 +77,12 @@ export default function App() {
   const [notes, setNotes] = useState<GoodsReceivedNote[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(async () => {
+    const started = Date.now();
     setLoading(true);
     setError(null);
     try {
@@ -89,11 +92,14 @@ export default function App() {
       ]);
       setDeliveries(d);
       setNotes(n);
+      setUpdatedAt(new Date());
     } catch {
       setError('Could not reach the receiving service on port 3004.');
       setDeliveries([]);
       setNotes([]);
     } finally {
+      // Keep the loading state visible long enough to register as a refresh.
+      await new Promise((r) => setTimeout(r, Math.max(0, 400 - (Date.now() - started))));
       setLoading(false);
     }
   }, []);
@@ -153,8 +159,9 @@ export default function App() {
             ☰
           </button>
           <h1>{title}</h1>
+          {updatedAt && <small className="muted">Updated {updatedAt.toLocaleTimeString()}</small>}
           <button className="btn ghost" onClick={load} disabled={loading}>
-            {loading ? 'Loading…' : '⟳ Refresh'}
+            {loading ? 'Refreshing…' : '⟳ Refresh'}
           </button>
         </header>
 

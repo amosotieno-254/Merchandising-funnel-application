@@ -31,13 +31,14 @@ const NAV: { id: View; label: string; icon: string }[] = [
 ];
 
 const money = (n: number) =>
-  n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+  n.toLocaleString('en-KE', { style: 'currency', currency: 'KES' });
 
 const short = (id: string) => `${id.slice(0, 8)}…`;
 
 async function api<T>(path: string, body?: unknown, base = API): Promise<T> {
   const r = await fetch(`${base}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
+    cache: 'no-store',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -62,21 +63,24 @@ export default function App() {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(async () => {
+    const started = Date.now();
     setLoading(true);
     setError(null);
     try {
       setOrders(await api<PurchaseOrder[]>('/purchase-orders'));
+      setUpdatedAt(new Date());
     } catch {
       setError('Could not reach the procurement service on port 3002.');
       setOrders([]);
     } finally {
+      await new Promise((r) => setTimeout(r, Math.max(0, 400 - (Date.now() - started))));
       setLoading(false);
     }
-    // Supplier names are a nice-to-have; the app still works without the vendor service.
     api<Supplier[]>('/suppliers', undefined, VENDOR_API)
       .then(setSuppliers)
       .catch(() => setSuppliers([]));
@@ -132,8 +136,9 @@ export default function App() {
             ☰
           </button>
           <h1>{title}</h1>
+          {updatedAt && <small className="muted">Updated {updatedAt.toLocaleTimeString()}</small>}
           <button className="btn ghost" onClick={load} disabled={loading}>
-            {loading ? 'Loading…' : '⟳ Refresh'}
+            {loading ? 'Refreshing…' : '⟳ Refresh'}
           </button>
         </header>
 
