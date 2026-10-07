@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const API = 'http://localhost:3004/api/v1';
+const API = `${import.meta.env.BASE_URL}api/v1`;
 
 interface ExpectedDelivery {
   id: string;
@@ -150,7 +150,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">API: localhost:3004</div>
+        <div className="sidebar-foot">API: {import.meta.env.VITE_BASE_API}</div>
       </aside>
 
       <div className="main">
