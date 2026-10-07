@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const API = "http://localhost:3007/api/v1";
+const API = import.meta.env.VITE_API_URL ?? "http://localhost:3007/api/v1";
 
 type RegisterSession = {
   id: string;
@@ -112,7 +112,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">API: localhost:3007</div>
+        <div className="sidebar-foot">API: {API}</div>
       </aside>
 
       <div className="main">
