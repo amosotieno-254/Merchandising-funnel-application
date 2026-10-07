@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const API = 'http://localhost:3002/api/v1';
-const VENDOR_API = 'http://localhost:3001/api/v1';
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3002/api/v1';
+const VENDOR_API = import.meta.env.VITE_VENDOR_API_URL ?? 'http://localhost:3001/api/v1';
 
 type PurchaseOrder = {
   id: string;
@@ -123,7 +123,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">API: localhost:3002</div>
+        <div className="sidebar-foot">API: {API}</div>
       </aside>
 
       <div className="main">

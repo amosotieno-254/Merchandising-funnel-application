@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-const API = 'http://localhost:3005/api/v1';
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3005/api/v1';
 
 interface StorageBin {
   id: string;
@@ -159,7 +159,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">API: localhost:3005</div>
+        <div className="sidebar-foot">API: {API}</div>
       </aside>
 
       <div className="main">
