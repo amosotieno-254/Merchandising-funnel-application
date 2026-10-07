@@ -1,0 +1,23 @@
+#!/bin/sh
+# Sourced by the nginx image's entrypoint before templates are rendered.
+# Points SSL_CERT / SSL_KEY at the Let's Encrypt cert for $DOMAIN, or at a
+# throwaway self-signed one if certbot hasn't issued it yet, so the gateway
+# still starts. Recreate nginx after `task certs:issue` to switch over.
+
+LE_DIR="/etc/letsencrypt/live/${DOMAIN}"
+
+if [ -f "${LE_DIR}/fullchain.pem" ] && [ -f "${LE_DIR}/privkey.pem" ]; then
+  export SSL_CERT="${LE_DIR}/fullchain.pem"
+  export SSL_KEY="${LE_DIR}/privkey.pem"
+  echo "ssl-cert: using Let's Encrypt cert for ${DOMAIN}"
+else
+  FALLBACK_DIR=/etc/nginx/fallback-cert
+  mkdir -p "${FALLBACK_DIR}"
+  openssl req -x509 -nodes -newkey rsa:2048 -days 30 \
+    -keyout "${FALLBACK_DIR}/privkey.pem" -out "${FALLBACK_DIR}/fullchain.pem" \
+    -subj "/CN=${DOMAIN}" -addext "subjectAltName=DNS:${DOMAIN}" 2>/dev/null
+  export SSL_CERT="${FALLBACK_DIR}/fullchain.pem"
+  export SSL_KEY="${FALLBACK_DIR}/privkey.pem"
+  echo "ssl-cert: WARNING no cert in ${LE_DIR}; using a temporary self-signed cert." \
+    "Run 'task certs:issue EMAIL=...' to get the real one."
+fi
