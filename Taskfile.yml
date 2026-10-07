@@ -1,0 +1,148 @@
+# https://taskfile.dev
+#
+#   task dev                     start infra + every backend and frontend
+#   task vendor                  start one service (backend + frontend)
+#   task -p vendor procurement   start several services side by side
+#   task vendor:backend          start just one half of a service
+#   task --list                  show everything
+
+version: '3'
+
+output: prefixed
+
+vars:
+  PKG: packages
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  # ---------------------------------------------------------------- setup
+
+  install:
+    desc: Install root workspace and all frontend dependencies
+    cmds:
+      - npm install
+      - for: [vendor-management, procurement, inventory, receiving, warehouse-operations]
+        cmd: npm --prefix {{.PKG}}/{{.ITEM}}/frontend install
+
+  # ---------------------------------------------------------------- infra
+
+  infra:up:
+    desc: Start Postgres databases and RabbitMQ (docker compose)
+    cmds:
+      - docker compose up -d
+
+  infra:down:
+    desc: Stop Postgres databases and RabbitMQ
+    cmds:
+      - docker compose down
+
+  infra:logs:
+    desc: Tail infra container logs
+    cmds:
+      - docker compose logs -f
+
+  # ---------------------------------------------------------------- all
+
+  dev:
+    desc: Start infra, then every backend and frontend
+    cmds:
+      - task: infra:up
+      - task: services
+
+  services:
+    desc: Start every backend and frontend (without infra)
+    deps: [vendor, procurement, inventory, receiving, warehouse]
+
+  backends:
+    desc: Start every backend
+    deps: [vendor:backend, procurement:backend, inventory:backend, receiving:backend, warehouse:backend]
+
+  frontends:
+    desc: Start every frontend
+    deps: [vendor:frontend, procurement:frontend, inventory:frontend, receiving:frontend, warehouse:frontend]
+
+  # ---------------------------------------------------------------- vendor (api :3001)
+
+  vendor:
+    desc: Start vendor-management backend + frontend
+    deps: [vendor:backend, vendor:frontend]
+
+  vendor:backend:
+    desc: Start vendor-management backend
+    deps: [{ task: _run, vars: { NAME: vendor-api, DIR: vendor-management/backend } }]
+
+  vendor:frontend:
+    desc: Start vendor-management frontend
+    deps: [{ task: _run, vars: { NAME: vendor-web, DIR: vendor-management/frontend } }]
+
+  # ---------------------------------------------------------------- procurement (api :3002)
+
+  procurement:
+    desc: Start procurement backend + frontend
+    deps: [procurement:backend, procurement:frontend]
+
+  procurement:backend:
+    desc: Start procurement backend
+    deps: [{ task: _run, vars: { NAME: procurement-api, DIR: procurement/backend } }]
+
+  procurement:frontend:
+    desc: Start procurement frontend
+    deps: [{ task: _run, vars: { NAME: procurement-web, DIR: procurement/frontend } }]
+
+  # ---------------------------------------------------------------- inventory (api :3003)
+
+  inventory:
+    desc: Start inventory backend + frontend
+    deps: [inventory:backend, inventory:frontend]
+
+  inventory:backend:
+    desc: Start inventory backend
+    deps: [{ task: _run, vars: { NAME: inventory-api, DIR: inventory/backend } }]
+
+  inventory:frontend:
+    desc: Start inventory frontend
+    deps: [{ task: _run, vars: { NAME: inventory-web, DIR: inventory/frontend } }]
+
+  # ---------------------------------------------------------------- receiving (api :3004)
+
+  receiving:
+    desc: Start receiving backend + frontend
+    deps: [receiving:backend, receiving:frontend]
+
+  receiving:backend:
+    desc: Start receiving backend
+    deps: [{ task: _run, vars: { NAME: receiving-api, DIR: receiving/backend } }]
+
+  receiving:frontend:
+    desc: Start receiving frontend
+    deps: [{ task: _run, vars: { NAME: receiving-web, DIR: receiving/frontend } }]
+
+  # ---------------------------------------------------------------- warehouse (api :3005)
+
+  warehouse:
+    desc: Start warehouse-operations backend + frontend
+    deps: [warehouse:backend, warehouse:frontend]
+
+  warehouse:backend:
+    desc: Start warehouse-operations backend
+    deps: [{ task: _run, vars: { NAME: warehouse-api, DIR: warehouse-operations/backend } }]
+
+  warehouse:frontend:
+    desc: Start warehouse-operations frontend
+    deps: [{ task: _run, vars: { NAME: warehouse-web, DIR: warehouse-operations/frontend } }]
+
+  # ---------------------------------------------------------------- internal
+
+  _run:
+    internal: true
+    label: '{{.NAME}}'
+    prefix: '{{.NAME}}'
+    dir: '{{.PKG}}/{{.DIR}}'
+    requires:
+      vars: [NAME, DIR]
+    cmds:
+      - npm run dev

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const API = "http://localhost:3001/api/v1";
+const API = "/api/v1";
 
 type Supplier = {
   id: string;
@@ -103,7 +103,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">API: localhost:3001</div>
+        <div className="sidebar-foot">API: {import.meta.env.VITE_BASE_API}</div>
       </aside>
 
       <div className="main">
@@ -129,7 +129,7 @@ export default function App() {
         <main className="content">
           {error && <div className="alert error">{error}</div>}
           {view === "dashboard" && (
-            <Dashboard suppliers={suppliers} go={go} open={openCatalog} />
+            <Dashboard suppliers={suppliers} open={openCatalog} />
           )}
           {view === "suppliers" && (
             <SupplierTable suppliers={suppliers} open={openCatalog} />
@@ -150,11 +150,9 @@ export default function App() {
 
 function Dashboard({
   suppliers,
-  go,
   open,
 }: {
   suppliers: Supplier[];
-  go: (v: View) => void;
   open: (id: string) => void;
 }) {
   const stats = useMemo(() => {
