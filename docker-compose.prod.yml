@@ -2,8 +2,16 @@
 #
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
-# Everything client-facing is reached through nginx on http://localhost/
-# (see nginx/default.conf; set GATEWAY_PORT to publish on a port other than 80):
+# Everything client-facing is reached through nginx over HTTPS on $DOMAIN
+# (default funnel-merch.reduzer.co.ke; see nginx/default.conf.template).
+# nginx needs a cert in ./certbot/conf/live/$DOMAIN/ before it starts:
+#
+#   task certs:issue EMAIL=you@example.com   # production, Let's Encrypt
+#   DOMAIN=localhost task certs:local        # local, self-signed
+#
+# The certbot service renews it twice a day; nginx reloads every 6h to pick
+# it up. GATEWAY_PORT / GATEWAY_TLS_PORT change the host ports (default 80 / 443).
+# Routes:
 #
 #   /vendor/  /procurement/  /inventory/  /receiving/  /warehouse/
 #
@@ -318,15 +326,36 @@ services:
     restart: unless-stopped
     ports:
       - "${GATEWAY_PORT:-80}:80"
+      - "${GATEWAY_TLS_PORT:-443}:443"
+    environment:
+      DOMAIN: ${DOMAIN:-funnel-merch.reduzer.co.ke}
+      NGINX_ENVSUBST_FILTER: ^DOMAIN$$
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./nginx/html:/usr/share/nginx/html:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    # Reload periodically so renewed certificates are picked up.
+    command: >-
+      /bin/sh -c 'while :; do sleep 6h & wait $$!; nginx -s reload; done &
+      exec /docker-entrypoint.sh nginx -g "daemon off;"'
     depends_on:
       - vendor-web
       - procurement-web
       - inventory-web
       - receiving-web
       - warehouse-web
+
+  certbot:
+    image: certbot/dns-cloudflare:latest
+    container_name: mms-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot:/etc/certbot:ro
+    # Renewal loop; first issuance is `task certs:issue` (see top of file).
+    entrypoint: >-
+      /bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet;
+      sleep 12h & wait $$!; done'
 
 volumes:
   vendor-data:
