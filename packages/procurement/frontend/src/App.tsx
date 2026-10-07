@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const API = '/api/v1';
-const VENDOR_API = '/vendor-api/v1';
+const API = `${import.meta.env.BASE_URL}api/v1`;
+const VENDOR_API = `${import.meta.env.BASE_URL}vendor-api/v1`;
 
 type PurchaseOrder = {
   id: string;

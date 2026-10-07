@@ -14,8 +14,11 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    // Served under a path prefix (e.g. /vendor/) behind nginx in production.
+    base: env.VITE_BASE_PATH || '/',
     plugins: [react()],
     server: { proxy },
-    preview: { proxy },
+    // nginx forwards the public Host header, which vite would otherwise reject.
+    preview: { proxy, allowedHosts: true },
   }
 })
