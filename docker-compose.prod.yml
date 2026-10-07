@@ -123,6 +123,13 @@ services:
       RABBITMQ_DEFAULT_PASS: mms
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+    # The broker takes ~30s to open :5672; backends wait for this to pass.
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
 
   # ---------------------------------------------------------------- vendor (api :3001)
 
@@ -139,8 +146,10 @@ services:
     ports:
       - "3001:3001"
     depends_on:
-      - vendor-db
-      - rabbitmq
+      vendor-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   vendor-web:
     <<: *frontend
@@ -172,9 +181,12 @@ services:
     ports:
       - "3002:3002"
     depends_on:
-      - procurement-db
-      - rabbitmq
-      - vendor-api
+      procurement-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      vendor-api:
+        condition: service_started
 
   procurement-web:
     <<: *frontend
@@ -208,8 +220,10 @@ services:
     ports:
       - "3003:3003"
     depends_on:
-      - inventory-db
-      - rabbitmq
+      inventory-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   inventory-web:
     <<: *frontend
@@ -241,9 +255,12 @@ services:
     ports:
       - "3004:3004"
     depends_on:
-      - receiving-db
-      - rabbitmq
-      - procurement-api
+      receiving-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      procurement-api:
+        condition: service_started
 
   receiving-web:
     <<: *frontend
@@ -274,8 +291,10 @@ services:
     ports:
       - "3005:3005"
     depends_on:
-      - warehouse-db
-      - rabbitmq
+      warehouse-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   warehouse-web:
     <<: *frontend
