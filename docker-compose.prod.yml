@@ -321,7 +321,13 @@ services:
   # ---------------------------------------------------------------- gateway
 
   nginx:
-    image: nginx:1.27-alpine
+    image: mms-nginx:latest
+    build:
+      context: ./nginx
+      dockerfile_inline: |
+        FROM nginx:1.27-alpine
+        RUN apk add --no-cache openssl
+        COPY 16-ssl-cert.envsh /docker-entrypoint.d/
     container_name: mms-nginx
     restart: unless-stopped
     ports:
@@ -329,7 +335,7 @@ services:
       - "${GATEWAY_TLS_PORT:-443}:443"
     environment:
       DOMAIN: ${DOMAIN:-funnel-merch.reduzer.co.ke}
-      NGINX_ENVSUBST_FILTER: ^DOMAIN$$
+      NGINX_ENVSUBST_FILTER: ^(DOMAIN|SSL_CERT|SSL_KEY)$$
     volumes:
       - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./nginx/html:/usr/share/nginx/html:ro
