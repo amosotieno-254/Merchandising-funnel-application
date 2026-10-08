@@ -45,39 +45,6 @@ tasks:
     cmds:
       - docker compose logs -f
 
-  # ---------------------------------------------------------------- tls
-
-  certs:issue:
-    desc: "Issue the Let's Encrypt cert via certbot DNS-01 (task certs:issue EMAIL=you@example.com)"
-    vars:
-      DOMAIN: '{{.DOMAIN | default "funnel-merch.reduzer.co.ke"}}'
-    requires:
-      vars: [EMAIL]
-    preconditions:
-      - sh: test -f certbot/cloudflare.ini
-        msg: "Create certbot/cloudflare.ini containing: dns_cloudflare_api_token = <token> (chmod 600)"
-    cmds:
-      - chmod 600 certbot/cloudflare.ini
-      - >-
-        docker compose -f docker-compose.prod.yml run --rm --entrypoint certbot certbot
-        certonly --dns-cloudflare --dns-cloudflare-credentials /etc/certbot/cloudflare.ini
-        --dns-cloudflare-propagation-seconds 30
-        -d {{.DOMAIN}} --email {{.EMAIL}} --agree-tos --no-eff-email --non-interactive
-      - DOMAIN={{.DOMAIN}} docker compose -f docker-compose.prod.yml up -d --force-recreate nginx certbot
-
-  certs:local:
-    desc: Generate a self-signed cert for running docker-compose.prod.yml locally (DOMAIN=localhost)
-    vars:
-      DIR: certbot/conf/live/localhost
-    status:
-      - test -f {{.DIR}}/fullchain.pem
-    cmds:
-      - mkdir -p {{.DIR}}
-      - >-
-        openssl req -x509 -nodes -newkey rsa:2048 -days 365
-        -keyout {{.DIR}}/privkey.pem -out {{.DIR}}/fullchain.pem
-        -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost"
-
   # ---------------------------------------------------------------- all
 
   dev:
