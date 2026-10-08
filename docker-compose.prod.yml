@@ -2,21 +2,16 @@
 #
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
-# Everything client-facing is reached through nginx over HTTPS on $DOMAIN
-# (default funnel-merch.reduzer.co.ke; see nginx/default.conf.template).
-# nginx needs a cert in ./certbot/conf/live/$DOMAIN/ before it starts:
+# Client traffic goes through nginx installed natively on the VPS (config:
+# nginx/funnel-merch.reduzer.co.ke), which routes by path prefix:
 #
-#   task certs:issue EMAIL=you@example.com   # production, Let's Encrypt
-#   DOMAIN=localhost task certs:local        # local, self-signed
+#   /<app>/      -> <app>-web on 127.0.0.1:517x   (vite preview, base /<app>/)
+#   /<app>/api/  -> <app>-api on 127.0.0.1:300x
 #
-# The certbot service renews it twice a day; nginx reloads every 6h to pick
-# it up. GATEWAY_PORT / GATEWAY_TLS_PORT change the host ports (default 80 / 443).
-# Routes:
+#   vendor 5173/3001  procurement 5174/3002  inventory 5175/3003
+#   receiving 5176/3004  warehouse 5177/3005
 #
-#   /vendor/  /procurement/  /inventory/  /receiving/  /warehouse/
-#
-# Frontends are built with `vite build` (base = VITE_BASE_PATH) and served by
-# `vite preview`; nginx routes /<app>/api/* to the matching backend.
+# Frontend ports are bound to 127.0.0.1 so they're only reachable via nginx.
 
 x-backend-build: &backend-build
   context: .
@@ -170,6 +165,8 @@ services:
     container_name: mms-vendor-web
     environment:
       VITE_BASE_API: http://vendor-api:3001
+    ports:
+      - "127.0.0.1:5173:4173"
     depends_on:
       - vendor-api
 
@@ -209,6 +206,8 @@ services:
     environment:
       VITE_BASE_API: http://procurement-api:3002
       VITE_VENDOR_API: http://vendor-api:3001
+    ports:
+      - "127.0.0.1:5174:4173"
     depends_on:
       - procurement-api
       - vendor-api
@@ -244,6 +243,8 @@ services:
     container_name: mms-inventory-web
     environment:
       VITE_BASE_API: http://inventory-api:3003
+    ports:
+      - "127.0.0.1:5175:4173"
     depends_on:
       - inventory-api
 
@@ -281,6 +282,8 @@ services:
     container_name: mms-receiving-web
     environment:
       VITE_BASE_API: http://receiving-api:3004
+    ports:
+      - "127.0.0.1:5176:4173"
     depends_on:
       - receiving-api
 
@@ -315,53 +318,10 @@ services:
     container_name: mms-warehouse-web
     environment:
       VITE_BASE_API: http://warehouse-api:3005
+    ports:
+      - "127.0.0.1:5177:4173"
     depends_on:
       - warehouse-api
-
-  # ---------------------------------------------------------------- gateway
-
-  nginx:
-    image: mms-nginx:latest
-    build:
-      context: ./nginx
-      dockerfile_inline: |
-        FROM nginx:1.27-alpine
-        RUN apk add --no-cache openssl
-        COPY 16-ssl-cert.envsh /docker-entrypoint.d/
-    container_name: mms-nginx
-    restart: unless-stopped
-    ports:
-      - "${GATEWAY_PORT:-80}:80"
-      - "${GATEWAY_TLS_PORT:-443}:443"
-    environment:
-      DOMAIN: ${DOMAIN:-funnel-merch.reduzer.co.ke}
-      NGINX_ENVSUBST_FILTER: ^(DOMAIN|SSL_CERT|SSL_KEY)$$
-    volumes:
-      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - ./nginx/html:/usr/share/nginx/html:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-    # Reload periodically so renewed certificates are picked up.
-    command: >-
-      /bin/sh -c 'while :; do sleep 6h & wait $$!; nginx -s reload; done &
-      exec /docker-entrypoint.sh nginx -g "daemon off;"'
-    depends_on:
-      - vendor-web
-      - procurement-web
-      - inventory-web
-      - receiving-web
-      - warehouse-web
-
-  certbot:
-    image: certbot/dns-cloudflare:latest
-    container_name: mms-certbot
-    restart: unless-stopped
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot:/etc/certbot:ro
-    # Renewal loop; first issuance is `task certs:issue` (see top of file).
-    entrypoint: >-
-      /bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet;
-      sleep 12h & wait $$!; done'
 
 volumes:
   vendor-data:

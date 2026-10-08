@@ -8,5 +8,3 @@ coverage/
 .vscode/
 .idea/
 drizzle/meta/
-# Let's Encrypt certs/keys and the Cloudflare API token used by certbot
-certbot/
