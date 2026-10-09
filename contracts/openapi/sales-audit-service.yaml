@@ -1,0 +1,202 @@
+openapi: 3.0.3
+info:
+  title: Sales Audit Service
+  version: 1.0.0
+  description: |
+    The control and accountability layer for the retail storefront.
+    Reconciles the physical cash in the drawer against the sales recorded
+    by the POS. Subscribes to ItemSold to accumulate expected totals and
+    publishes DayClosed when a register is signed off.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://audit.mms.internal
+    description: Production
+  - url: http://localhost:3007
+    description: Local development
+security: []
+tags:
+  - name: RegisterSessions
+    description: Register open/close lifecycle
+  - name: RegisterClosures
+    description: Signed-off register closures
+paths:
+  /api/v1/register-sessions:
+    get:
+      summary: List all register sessions
+      operationId: listRegisterSessions
+      tags: [RegisterSessions]
+      responses:
+        '200':
+          description: A list of register sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSessionListResponse'
+        '4XX':
+          description: Client error
+    post:
+      summary: Open a new register session
+      operationId: openRegister
+      tags: [RegisterSessions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenRegisterRequest'
+      responses:
+        '201':
+          description: Register opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSessionResponse'
+        '400':
+          description: Invalid input
+        '4XX':
+          description: Client error
+  /api/v1/register-sessions/{id}:
+    get:
+      summary: Get a single register session
+      operationId: getRegisterSession
+      tags: [RegisterSessions]
+      parameters:
+        - $ref: '#/components/parameters/RegisterSessionId'
+      responses:
+        '200':
+          description: Register session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSessionResponse'
+        '404':
+          description: Register session not found
+        '4XX':
+          description: Client error
+  /api/v1/register-sessions/{id}/close:
+    post:
+      summary: Close a register session with a physical cash count
+      description: |
+        Compares the expected total (from POS ItemSold events) with the
+        physical amount counted by the manager. Computes the difference
+        and publishes a DayClosed event.
+      operationId: closeRegister
+      tags: [RegisterSessions]
+      parameters:
+        - $ref: '#/components/parameters/RegisterSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseRegisterRequest'
+      responses:
+        '200':
+          description: Register closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSessionResponse'
+        '400':
+          description: Invalid input
+        '404':
+          description: Register session not found
+        '4XX':
+          description: Client error
+  /api/v1/register-closures:
+    get:
+      summary: List all signed-off register closures
+      operationId: listRegisterClosures
+      tags: [RegisterClosures]
+      responses:
+        '200':
+          description: A list of closures
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterClosureListResponse'
+        '4XX':
+          description: Client error
+components:
+  parameters:
+    RegisterSessionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    RegisterSession:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        displayId: { type: string, example: "REG-3K7A" }
+        storeName: { type: string, example: "Nairobi CBD" }
+        registerName: { type: string, example: "Register 1" }
+        cashierName: { type: string, example: "Alice" }
+        openedAt: { type: string, format: date-time }
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [OPEN, CLOSED]
+        expectedTotal: { type: string, example: "1500.00" }
+        actualTotal:
+          type: string
+          nullable: true
+        difference:
+          type: string
+          nullable: true
+        explanation:
+          type: string
+          nullable: true
+    RegisterClosure:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        registerSessionId: { type: string, format: uuid }
+        managerName: { type: string }
+        signedOffAt: { type: string, format: date-time }
+        notes:
+          type: string
+          nullable: true
+    OpenRegisterRequest:
+      type: object
+      required: [storeName, registerName, cashierName]
+      properties:
+        storeName: { type: string, example: "Nairobi CBD" }
+        registerName: { type: string, example: "Register 1" }
+        cashierName: { type: string, example: "Alice" }
+    CloseRegisterRequest:
+      type: object
+      required: [actualTotal, managerName]
+      properties:
+        actualTotal: { type: string, example: "4950.00" }
+        managerName: { type: string, example: "Bob" }
+        explanation:
+          type: string
+          example: "KES 50 short — cashier forgot to log a payout"
+    RegisterSessionResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/RegisterSession' }
+    RegisterSessionListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RegisterSession' }
+    RegisterClosureListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RegisterClosure' }

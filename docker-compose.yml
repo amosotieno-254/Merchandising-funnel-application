@@ -5,10 +5,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: vendor
-      POSTGRES_PASSWORD: vendor
+      POSTGRES_PASSWORD: ${VENDOR_DB_PASSWORD:-vendor}
       POSTGRES_DB: vendor_db
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - vendor-data:/var/lib/postgresql/data
 
@@ -18,10 +18,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: procurement
-      POSTGRES_PASSWORD: procurement
+      POSTGRES_PASSWORD: ${PROCUREMENT_DB_PASSWORD:-procurement}
       POSTGRES_DB: procurement_db
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - procurement-data:/var/lib/postgresql/data
 
@@ -31,10 +31,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: inventory
-      POSTGRES_PASSWORD: inventory
+      POSTGRES_PASSWORD: ${INVENTORY_DB_PASSWORD:-inventory}
       POSTGRES_DB: inventory_db
     ports:
-      - "5435:5432"
+      - "127.0.0.1:5435:5432"
     volumes:
       - inventory-data:/var/lib/postgresql/data
 
@@ -44,10 +44,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: receiving
-      POSTGRES_PASSWORD: receiving
+      POSTGRES_PASSWORD: ${RECEIVING_DB_PASSWORD:-receiving}
       POSTGRES_DB: receiving_db
     ports:
-      - "5436:5432"
+      - "127.0.0.1:5436:5432"
     volumes:
       - receiving-data:/var/lib/postgresql/data
 
@@ -57,23 +57,61 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: warehouse
-      POSTGRES_PASSWORD: warehouse
+      POSTGRES_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-warehouse}
       POSTGRES_DB: warehouse_db
     ports:
-      - "5437:5432"
+      - "127.0.0.1:5437:5432"
     volumes:
       - warehouse-data:/var/lib/postgresql/data
 
+  pos-db:
+    image: postgres:16
+    container_name: mms-pos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pos
+      POSTGRES_PASSWORD: ${POS_DB_PASSWORD:-pos}
+      POSTGRES_DB: pos_db
+    ports:
+      - "127.0.0.1:5438:5432"
+    volumes:
+      - pos-data:/var/lib/postgresql/data
+
+  audit-db:
+    image: postgres:16
+    container_name: mms-audit-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: audit
+      POSTGRES_PASSWORD: ${AUDIT_DB_PASSWORD:-audit}
+      POSTGRES_DB: audit_db
+    ports:
+      - "127.0.0.1:5439:5432"
+    volumes:
+      - audit-data:/var/lib/postgresql/data
+
+  financials-db:
+    image: postgres:16
+    container_name: mms-financials-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: financials
+      POSTGRES_PASSWORD: ${FINANCIALS_DB_PASSWORD:-financials}
+      POSTGRES_DB: financials_db
+    ports:
+      - "127.0.0.1:5440:5432"
+    volumes:
+      - financials-data:/var/lib/postgresql/data
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: mms-rabbitmq
     restart: unless-stopped
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: mms
-      RABBITMQ_DEFAULT_PASS: mms
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-mms}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
 
@@ -84,3 +122,6 @@ volumes:
   receiving-data:
   rabbitmq-data:
   warehouse-data:
+  pos-data:
+  audit-data:
+  financials-data:
