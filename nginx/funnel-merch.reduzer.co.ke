@@ -18,6 +18,9 @@
 #   inventory     5175   3003
 #   receiving     5176   3004
 #   warehouse     5177   3005
+#   retail        5178   3006
+#   sales-audit   5179   3007
+#   financials    5180   3008
 
 server {
   listen 80;
@@ -128,5 +131,41 @@ server {
 
   location /warehouse/ {
     proxy_pass http://127.0.0.1:5177;
+  }
+
+  # ---------------------------------------------------------------- retail (POS)
+
+  location = /retail { return 301 /retail/; }
+
+  location /retail/api/ {
+    proxy_pass http://127.0.0.1:3006/api/;
+  }
+
+  location /retail/ {
+    proxy_pass http://127.0.0.1:5178;
+  }
+
+  # ---------------------------------------------------------------- sales audit
+
+  location = /sales-audit { return 301 /sales-audit/; }
+
+  location /sales-audit/api/ {
+    proxy_pass http://127.0.0.1:3007/api/;
+  }
+
+  location /sales-audit/ {
+    proxy_pass http://127.0.0.1:5179;
+  }
+
+  # ---------------------------------------------------------------- financials
+
+  location = /financials { return 301 /financials/; }
+
+  location /financials/api/ {
+    proxy_pass http://127.0.0.1:3008/api/;
+  }
+
+  location /financials/ {
+    proxy_pass http://127.0.0.1:5180;
   }
 }

@@ -25,7 +25,7 @@ tasks:
     desc: Install root workspace and all frontend dependencies
     cmds:
       - npm install
-      - for: [vendor-management, procurement, inventory, receiving, warehouse-operations]
+      - for: [vendor-management, procurement, inventory, receiving, warehouse-operations, retail-sales, sales-audit, financials]
         cmd: npm --prefix {{.PKG}}/{{.ITEM}}/frontend install
 
   # ---------------------------------------------------------------- infra
@@ -55,15 +55,15 @@ tasks:
 
   services:
     desc: Start every backend and frontend (without infra)
-    deps: [vendor, procurement, inventory, receiving, warehouse]
+    deps: [vendor, procurement, inventory, receiving, warehouse, retail, audit, financials]
 
   backends:
     desc: Start every backend
-    deps: [vendor:backend, procurement:backend, inventory:backend, receiving:backend, warehouse:backend]
+    deps: [vendor:backend, procurement:backend, inventory:backend, receiving:backend, warehouse:backend, retail:backend, audit:backend, financials:backend]
 
   frontends:
     desc: Start every frontend
-    deps: [vendor:frontend, procurement:frontend, inventory:frontend, receiving:frontend, warehouse:frontend]
+    deps: [vendor:frontend, procurement:frontend, inventory:frontend, receiving:frontend, warehouse:frontend, retail:frontend, audit:frontend, financials:frontend]
 
   # ---------------------------------------------------------------- vendor (api :3001)
 
@@ -134,6 +134,48 @@ tasks:
   warehouse:frontend:
     desc: Start warehouse-operations frontend
     deps: [{ task: _run, vars: { NAME: warehouse-web, DIR: warehouse-operations/frontend } }]
+
+  # ---------------------------------------------------------------- retail (api :3006)
+
+  retail:
+    desc: Start retail-sales (POS) backend + frontend
+    deps: [retail:backend, retail:frontend]
+
+  retail:backend:
+    desc: Start retail-sales (POS) backend
+    deps: [{ task: _run, vars: { NAME: retail-api, DIR: retail-sales/backend } }]
+
+  retail:frontend:
+    desc: Start retail-sales (POS) frontend
+    deps: [{ task: _run, vars: { NAME: retail-web, DIR: retail-sales/frontend } }]
+
+  # ---------------------------------------------------------------- audit (api :3007)
+
+  audit:
+    desc: Start sales-audit backend + frontend
+    deps: [audit:backend, audit:frontend]
+
+  audit:backend:
+    desc: Start sales-audit backend
+    deps: [{ task: _run, vars: { NAME: sales-audit-api, DIR: sales-audit/backend } }]
+
+  audit:frontend:
+    desc: Start sales-audit frontend
+    deps: [{ task: _run, vars: { NAME: sales-audit-web, DIR: sales-audit/frontend } }]
+
+  # ---------------------------------------------------------------- financials (api :3008)
+
+  financials:
+    desc: Start financials backend + frontend
+    deps: [financials:backend, financials:frontend]
+
+  financials:backend:
+    desc: Start financials backend
+    deps: [{ task: _run, vars: { NAME: financials-api, DIR: financials/backend } }]
+
+  financials:frontend:
+    desc: Start financials frontend
+    deps: [{ task: _run, vars: { NAME: financials-web, DIR: financials/frontend } }]
 
   # ---------------------------------------------------------------- internal
 

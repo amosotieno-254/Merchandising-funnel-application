@@ -9,7 +9,8 @@
 #   /<app>/api/  -> <app>-api on 127.0.0.1:300x
 #
 #   vendor 5173/3001  procurement 5174/3002  inventory 5175/3003
-#   receiving 5176/3004  warehouse 5177/3005
+#   receiving 5176/3004  warehouse 5177/3005  retail 5178/3006
+#   sales-audit 5179/3007  financials 5180/3008
 #
 # Frontend ports are bound to 127.0.0.1 so they're only reachable via nginx.
 
@@ -113,6 +114,45 @@ services:
       - "5437:5432"
     volumes:
       - warehouse-data:/var/lib/postgresql/data
+
+  pos-db:
+    image: postgres:16
+    container_name: mms-pos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pos
+      POSTGRES_PASSWORD: pos
+      POSTGRES_DB: pos_db
+    ports:
+      - "5438:5432"
+    volumes:
+      - pos-data:/var/lib/postgresql/data
+
+  audit-db:
+    image: postgres:16
+    container_name: mms-audit-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: audit
+      POSTGRES_PASSWORD: audit
+      POSTGRES_DB: audit_db
+    ports:
+      - "5439:5432"
+    volumes:
+      - audit-data:/var/lib/postgresql/data
+
+  financials-db:
+    image: postgres:16
+    container_name: mms-financials-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: financials
+      POSTGRES_PASSWORD: financials
+      POSTGRES_DB: financials_db
+    ports:
+      - "5440:5432"
+    volumes:
+      - financials-data:/var/lib/postgresql/data
 
   rabbitmq:
     image: rabbitmq:3.13-management
@@ -323,6 +363,118 @@ services:
     depends_on:
       - warehouse-api
 
+  # ---------------------------------------------------------------- retail / POS (api :3006)
+
+  retail-api:
+    <<: *backend
+    build: *backend-build
+    container_name: mms-retail-api
+    working_dir: /app/packages/retail-sales/backend
+    environment:
+      NODE_ENV: production
+      PORT: 3006
+      DATABASE_URL: postgres://pos:pos@pos-db:5432/pos_db
+      RABBITMQ_URL: amqp://mms:mms@rabbitmq:5672
+      # Stock checks go to the inventory service's gRPC server.
+      INVENTORY_GRPC_URL: inventory-api:50051
+    ports:
+      - "3006:3006"
+    depends_on:
+      pos-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      inventory-api:
+        condition: service_started
+
+  retail-web:
+    <<: *frontend
+    build:
+      <<: *frontend-build
+      args:
+        APP_DIR: packages/retail-sales/frontend
+        VITE_BASE_PATH: /retail/
+        VITE_BASE_API: http://retail-api:3006
+    container_name: mms-retail-web
+    environment:
+      VITE_BASE_API: http://retail-api:3006
+    ports:
+      - "127.0.0.1:5178:4173"
+    depends_on:
+      - retail-api
+
+  # ---------------------------------------------------------------- sales audit (api :3007)
+
+  sales-audit-api:
+    <<: *backend
+    build: *backend-build
+    container_name: mms-sales-audit-api
+    working_dir: /app/packages/sales-audit/backend
+    environment:
+      NODE_ENV: production
+      PORT: 3007
+      DATABASE_URL: postgres://audit:audit@audit-db:5432/audit_db
+      RABBITMQ_URL: amqp://mms:mms@rabbitmq:5672
+    ports:
+      - "3007:3007"
+    depends_on:
+      audit-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  sales-audit-web:
+    <<: *frontend
+    build:
+      <<: *frontend-build
+      args:
+        APP_DIR: packages/sales-audit/frontend
+        VITE_BASE_PATH: /sales-audit/
+        VITE_BASE_API: http://sales-audit-api:3007
+    container_name: mms-sales-audit-web
+    environment:
+      VITE_BASE_API: http://sales-audit-api:3007
+    ports:
+      - "127.0.0.1:5179:4173"
+    depends_on:
+      - sales-audit-api
+
+  # ---------------------------------------------------------------- financials (api :3008)
+
+  financials-api:
+    <<: *backend
+    build: *backend-build
+    container_name: mms-financials-api
+    working_dir: /app/packages/financials/backend
+    environment:
+      NODE_ENV: production
+      PORT: 3008
+      DATABASE_URL: postgres://financials:financials@financials-db:5432/financials_db
+      RABBITMQ_URL: amqp://mms:mms@rabbitmq:5672
+    ports:
+      - "3008:3008"
+    depends_on:
+      financials-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  financials-web:
+    <<: *frontend
+    build:
+      <<: *frontend-build
+      args:
+        APP_DIR: packages/financials/frontend
+        VITE_BASE_PATH: /financials/
+        VITE_BASE_API: http://financials-api:3008
+    container_name: mms-financials-web
+    environment:
+      VITE_BASE_API: http://financials-api:3008
+    ports:
+      - "127.0.0.1:5180:4173"
+    depends_on:
+      - financials-api
+
 volumes:
   vendor-data:
   procurement-data:
@@ -330,3 +482,6 @@ volumes:
   receiving-data:
   rabbitmq-data:
   warehouse-data:
+  pos-data:
+  audit-data:
+  financials-data:
