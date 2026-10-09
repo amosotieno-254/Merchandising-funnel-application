@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3005/api/v1';
+const API = `${import.meta.env.BASE_URL}api/v1`;
 
 interface StorageBin {
   id: string;
@@ -49,6 +49,7 @@ const NAV: { id: View; label: string; icon: string }[] = [
 async function api<T>(path: string, body?: unknown): Promise<T> {
   const r = await fetch(`${API}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
+    cache: 'no-store',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -89,10 +90,12 @@ export default function App() {
   const [picks, setPicks] = useState<PickTask[]>([]);
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(async () => {
+    const started = Date.now();
     setLoading(true);
     setError(null);
     try {
@@ -106,9 +109,12 @@ export default function App() {
       setPutaway(p);
       setPicks(k);
       setTransfers(t);
+      setUpdatedAt(new Date());
     } catch {
       setError('Could not reach the warehouse operations service on port 3005.');
     } finally {
+      // Keep the loading state visible long enough to register as a refresh.
+      await new Promise((r) => setTimeout(r, Math.max(0, 400 - (Date.now() - started))));
       setLoading(false);
     }
   }, []);
@@ -159,7 +165,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">API: {API}</div>
+        <div className="sidebar-foot">API: {import.meta.env.VITE_BASE_API}</div>
       </aside>
 
       <div className="main">
@@ -168,8 +174,9 @@ export default function App() {
             ☰
           </button>
           <h1>{title}</h1>
+          {updatedAt && <small className="muted">Updated {updatedAt.toLocaleTimeString()}</small>}
           <button className="btn ghost" onClick={load} disabled={loading}>
-            {loading ? 'Loading…' : '⟳ Refresh'}
+            {loading ? 'Refreshing…' : '⟳ Refresh'}
           </button>
         </header>
 

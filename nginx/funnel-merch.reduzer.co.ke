@@ -1,0 +1,132 @@
+# nginx site for funnel-merch.reduzer.co.ke (native nginx on the VPS).
+#
+# Install:
+#   sudo cp nginx/funnel-merch.reduzer.co.ke /etc/nginx/sites-available/
+#   sudo ln -s /etc/nginx/sites-available/funnel-merch.reduzer.co.ke /etc/nginx/sites-enabled/
+#   sudo mkdir -p /var/www/funnel-merch.reduzer.co.ke
+#   sudo cp nginx/html/index.html /var/www/funnel-merch.reduzer.co.ke/
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Routes (containers from docker-compose.prod.yml, published on 127.0.0.1):
+#
+#   /<app>/        -> <app>-web  (vite preview, built with base /<app>/)
+#   /<app>/api/    -> <app>-api  (prefix stripped: /<app>/api/v1/x -> /api/v1/x)
+#
+#   app           web    api
+#   vendor        5173   3001
+#   procurement   5174   3002
+#   inventory     5175   3003
+#   receiving     5176   3004
+#   warehouse     5177   3005
+
+server {
+  listen 80;
+  listen [::]:80;
+  server_name funnel-merch.reduzer.co.ke;
+
+  # For certbot --webroot, if used.
+  location /.well-known/acme-challenge/ {
+    root /var/www/funnel-merch.reduzer.co.ke;
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+  server_name funnel-merch.reduzer.co.ke;
+
+  ssl_certificate     /etc/letsencrypt/live/funnel-merch.reduzer.co.ke/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/funnel-merch.reduzer.co.ke/privkey.pem;
+  ssl_protocols       TLSv1.2 TLSv1.3;
+  ssl_session_cache   shared:SSL:10m;
+  ssl_session_timeout 1d;
+
+  client_max_body_size 10m;
+  absolute_redirect off;
+
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+
+  location = / {
+    root /var/www/funnel-merch.reduzer.co.ke;
+    try_files /index.html =404;
+  }
+
+  location = /healthz {
+    access_log off;
+    return 200 "ok\n";
+  }
+
+  # ---------------------------------------------------------------- vendor
+
+  location = /vendor { return 301 /vendor/; }
+
+  location /vendor/api/ {
+    proxy_pass http://127.0.0.1:3001/api/;
+  }
+
+  location /vendor/ {
+    proxy_pass http://127.0.0.1:5173;
+  }
+
+  # ---------------------------------------------------------------- procurement
+
+  location = /procurement { return 301 /procurement/; }
+
+  location /procurement/api/ {
+    proxy_pass http://127.0.0.1:3002/api/;
+  }
+
+  # Supplier lookups from the procurement UI go straight to the vendor API.
+  location /procurement/vendor-api/ {
+    proxy_pass http://127.0.0.1:3001/api/;
+  }
+
+  location /procurement/ {
+    proxy_pass http://127.0.0.1:5174;
+  }
+
+  # ---------------------------------------------------------------- inventory
+
+  location = /inventory { return 301 /inventory/; }
+
+  location /inventory/api/ {
+    proxy_pass http://127.0.0.1:3003/api/;
+  }
+
+  location /inventory/ {
+    proxy_pass http://127.0.0.1:5175;
+  }
+
+  # ---------------------------------------------------------------- receiving
+
+  location = /receiving { return 301 /receiving/; }
+
+  location /receiving/api/ {
+    proxy_pass http://127.0.0.1:3004/api/;
+  }
+
+  location /receiving/ {
+    proxy_pass http://127.0.0.1:5176;
+  }
+
+  # ---------------------------------------------------------------- warehouse
+
+  location = /warehouse { return 301 /warehouse/; }
+
+  location /warehouse/api/ {
+    proxy_pass http://127.0.0.1:3005/api/;
+  }
+
+  location /warehouse/ {
+    proxy_pass http://127.0.0.1:5177;
+  }
+}

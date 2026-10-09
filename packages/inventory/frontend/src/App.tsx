@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3003/api/v1';
+const API = `${import.meta.env.BASE_URL}api/v1`;
 const LOW_STOCK = 10;
 
 type Stock = {
@@ -35,20 +35,24 @@ export default function App() {
   const [view, setView] = useState<View>(currentView);
   const [stock, setStock] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(async () => {
+    const started = Date.now();
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(`${API}/stock`);
+      const r = await fetch(`${API}/stock`, { cache: 'no-store' });
       const res = await r.json();
       setStock(res.data ?? []);
+      setUpdatedAt(new Date());
     } catch {
       setError('Could not reach the inventory service on port 3003.');
       setStock([]);
     } finally {
+      await new Promise((r) => setTimeout(r, Math.max(0, 400 - (Date.now() - started))));
       setLoading(false);
     }
   }, []);
@@ -70,6 +74,16 @@ export default function App() {
   };
 
   const title = NAV.find((n) => n.id === view)?.label;
+
+  const productCodes = useMemo(
+    () => Array.from(new Set(stock.map((s) => s.productCode))).sort(),
+    [stock]
+  );
+
+  const locations = useMemo(
+    () => Array.from(new Set(stock.map((s) => s.location))).sort(),
+    [stock]
+  );
 
   return (
     <div className="layout">
@@ -93,7 +107,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">API: {API}</div>
+        <div className="sidebar-foot">API: {import.meta.env.VITE_BASE_API}</div>
       </aside>
 
       <div className="main">
@@ -102,8 +116,9 @@ export default function App() {
             ☰
           </button>
           <h1>{title}</h1>
+          {updatedAt && <small className="muted">Updated {updatedAt.toLocaleTimeString()}</small>}
           <button className="btn ghost" onClick={load} disabled={loading}>
-            {loading ? 'Loading…' : '⟳ Refresh'}
+            {loading ? 'Refreshing…' : '⟳ Refresh'}
           </button>
         </header>
 
@@ -111,9 +126,15 @@ export default function App() {
           {error && <div className="alert error">{error}</div>}
           {view === 'dashboard' && <Dashboard stock={stock} go={go} />}
           {view === 'stock' && <StockTable stock={stock} />}
-          {view === 'receive' && <ReceiveForm onDone={load} />}
-          {view === 'sell' && <SellForm onDone={load} />}
-          {view === 'availability' && <Availability />}
+          {view === 'receive' && (
+            <ReceiveForm onDone={load} productCodes={productCodes} locations={locations} />
+          )}
+          {view === 'sell' && (
+            <SellForm onDone={load} productCodes={productCodes} locations={locations} />
+          )}
+          {view === 'availability' && (
+            <Availability productCodes={productCodes} locations={locations} />
+          )}
         </main>
       </div>
     </div>
@@ -264,7 +285,15 @@ function useStatus() {
   return { status, setStatus, busy, setBusy };
 }
 
-function ReceiveForm({ onDone }: { onDone: () => void }) {
+function ReceiveForm({
+  onDone,
+  productCodes,
+  locations,
+}: {
+  onDone: () => void;
+  productCodes: string[];
+  locations: string[];
+}) {
   const [f, setF] = useState({ productCode: '', location: '', quantity: '', unitCost: '' });
   const { status, setStatus, busy, setBusy } = useStatus();
 
@@ -293,11 +322,25 @@ function ReceiveForm({ onDone }: { onDone: () => void }) {
     <section className="panel narrow">
       <h2>Receive stock</h2>
       <form onSubmit={submit} className="form">
-        <Field label="Product code" value={f.productCode} onChange={(v) => setF({ ...f, productCode: v })} />
-        <Field label="Location" value={f.location} onChange={(v) => setF({ ...f, location: v })} />
+        <SuggestField
+          label="Product code"
+          value={f.productCode}
+          onChange={(v) => setF({ ...f, productCode: v })}
+          options={productCodes}
+          placeholder="Type or pick a product code"
+          datalistId="receive-product-codes"
+        />
+        <SuggestField
+          label="Location"
+          value={f.location}
+          onChange={(v) => setF({ ...f, location: v })}
+          options={locations}
+          placeholder="Type or pick a location"
+          datalistId="receive-locations"
+        />
         <div className="row">
           <Field label="Quantity" type="number" min="1" value={f.quantity} onChange={(v) => setF({ ...f, quantity: v })} />
-          <Field label="Unit cost" type="number" step="0.01" min="0" value={f.unitCost} onChange={(v) => setF({ ...f, unitCost: v })} />
+          <Field label="Unit cost (ksh)" type="number" step="0.01" min="0" value={f.unitCost} onChange={(v) => setF({ ...f, unitCost: v })} />
         </div>
         {status && <div className={`alert ${status.kind}`}>{status.msg}</div>}
         <button className="btn primary" disabled={busy}>{busy ? 'Saving…' : 'Receive'}</button>
@@ -306,7 +349,15 @@ function ReceiveForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function SellForm({ onDone }: { onDone: () => void }) {
+function SellForm({
+  onDone,
+  productCodes,
+  locations,
+}: {
+  onDone: () => void;
+  productCodes: string[];
+  locations: string[];
+}) {
   const [f, setF] = useState({ productCode: '', location: '', quantity: '' });
   const { status, setStatus, busy, setBusy } = useStatus();
 
@@ -334,8 +385,22 @@ function SellForm({ onDone }: { onDone: () => void }) {
     <section className="panel narrow">
       <h2>Sell / issue stock</h2>
       <form onSubmit={submit} className="form">
-        <Field label="Product code" value={f.productCode} onChange={(v) => setF({ ...f, productCode: v })} />
-        <Field label="Location" value={f.location} onChange={(v) => setF({ ...f, location: v })} />
+        <SuggestField
+          label="Product code"
+          value={f.productCode}
+          onChange={(v) => setF({ ...f, productCode: v })}
+          options={productCodes}
+          placeholder="Type or pick a product code"
+          datalistId="sell-product-codes"
+        />
+        <SuggestField
+          label="Location"
+          value={f.location}
+          onChange={(v) => setF({ ...f, location: v })}
+          options={locations}
+          placeholder="Type or pick a location"
+          datalistId="sell-locations"
+        />
         <Field label="Quantity" type="number" min="1" value={f.quantity} onChange={(v) => setF({ ...f, quantity: v })} />
         {status && <div className={`alert ${status.kind}`}>{status.msg}</div>}
         <button className="btn primary" disabled={busy}>{busy ? 'Saving…' : 'Issue stock'}</button>
@@ -344,7 +409,13 @@ function SellForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function Availability() {
+function Availability({
+  productCodes,
+  locations,
+}: {
+  productCodes: string[];
+  locations: string[];
+}) {
   const [code, setCode] = useState('');
   const [location, setLocation] = useState('');
   const [result, setResult] = useState<number | null>(null);
@@ -372,8 +443,22 @@ function Availability() {
     <section className="panel narrow">
       <h2>Check availability</h2>
       <form onSubmit={submit} className="form">
-        <Field label="Product code" value={code} onChange={setCode} />
-        <Field label="Location" value={location} onChange={setLocation} />
+        <SuggestField
+          label="Product code / name"
+          value={code}
+          onChange={setCode}
+          options={productCodes}
+          placeholder="Type or pick a product code"
+          datalistId="availability-product-codes"
+        />
+        <SuggestField
+          label="Location"
+          value={location}
+          onChange={setLocation}
+          options={locations}
+          placeholder="Type or pick a location"
+          datalistId="availability-locations"
+        />
         {status && <div className={`alert ${status.kind}`}>{status.msg}</div>}
         <button className="btn primary" disabled={busy}>{busy ? 'Checking…' : 'Check'}</button>
       </form>
@@ -401,6 +486,40 @@ function Field({
     <label className="field">
       <span>{label}</span>
       <input required value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
+    </label>
+  );
+}
+
+function SuggestField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  datalistId,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+  datalistId: string;
+}) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input
+        required
+        list={datalistId}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <datalist id={datalistId}>
+        {options.map((o) => (
+          <option key={o} value={o} />
+        ))}
+      </datalist>
     </label>
   );
 }

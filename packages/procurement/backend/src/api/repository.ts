@@ -16,6 +16,7 @@ export const repository = {
   },
 
   insertPurchaseOrder(values: {
+    displayId:string;
     supplierId: string;
     paymentTerms: string;
     totalCost: string;
