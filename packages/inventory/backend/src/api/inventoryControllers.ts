@@ -49,8 +49,8 @@ export async function sellStock(req: Request, res: Response) {
       quantity,
     });
 
-    if ('error' in result) {
-      return res.status(400).json(fail('query parameter "location"is required'));
+    if (result.error) {
+      return res.status(400).json(fail(result.error));
     }
 
     res.json(ok(result.data));

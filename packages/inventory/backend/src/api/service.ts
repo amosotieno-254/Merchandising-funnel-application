@@ -57,8 +57,15 @@ export const service = {
       input.location
     );
 
-    if (!existing || existing.onHand < input.quantity) {
-      return { error: 'Insufficient stock' as const };
+    if (!existing) {
+      return {
+        error: `Insufficient stock: no ${input.productCode} at ${input.location}`,
+      };
+    }
+    if (existing.onHand < input.quantity) {
+      return {
+        error: `Insufficient stock for ${input.productCode} at ${input.location}: requested ${input.quantity}, on hand ${existing.onHand}`,
+      };
     }
 
     const [updated] = await repository.updateStock(existing.id, {
