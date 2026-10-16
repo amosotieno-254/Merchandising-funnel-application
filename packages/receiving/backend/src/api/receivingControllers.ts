@@ -19,20 +19,35 @@ const createGoodsReceivedNoteSchema = z.object({
 });
 
 export async function listExpectedDeliveries(_req: Request, res: Response) {
-  res.json(ok(await service.listExpectedDeliveries()));
+  try {
+    res.json(ok(await service.listExpectedDeliveries()));
+  } catch (err) {
+    console.error('listExpectedDeliveries failed:', err);
+    res.status(500).json(fail('Could not load expected deliveries'));
+  }
 }
 
 export async function listGoodsReceivedNotes(_req: Request, res: Response) {
-  res.json(ok(await service.listGoodsReceivedNotes()));
+  try {
+    res.json(ok(await service.listGoodsReceivedNotes()));
+  } catch (err) {
+    console.error('listGoodsReceivedNotes failed:', err);
+    res.status(500).json(fail('Could not load Goods Received Notes'));
+  }
 }
 
 export async function getGoodsReceivedNote(req: Request, res: Response) {
   if (!z.uuid().safeParse(req.params.id).success) {
     return res.status(404).json(fail('Goods Received Note not found'));
   }
-  const note = await service.getGoodsReceivedNoteWithLines(req.params.id);
-  if (!note) return res.status(404).json(fail('Goods Received Note not found'));
-  res.json(ok(note));
+  try {
+    const note = await service.getGoodsReceivedNoteWithLines(req.params.id);
+    if (!note) return res.status(404).json(fail('Goods Received Note not found'));
+    res.json(ok(note));
+  } catch (err) {
+    console.error('getGoodsReceivedNote failed:', err);
+    res.status(500).json(fail('Could not load Goods Received Note'));
+  }
 }
 
 export async function createGoodsReceivedNote(req: Request, res: Response) {
@@ -43,6 +58,11 @@ export async function createGoodsReceivedNote(req: Request, res: Response) {
       .status(400)
       .json(fail(`${issue.path.join('.') || 'body'}: ${issue.message}`));
   }
-  const created = await service.createGoodsReceivedNote(parsed.data);
-  res.status(201).json(ok(created));
+  try {
+    const created = await service.createGoodsReceivedNote(parsed.data);
+    res.status(201).json(ok(created));
+  } catch (err) {
+    console.error('createGoodsReceivedNote failed:', err);
+    res.status(500).json(fail('Could not create Goods Received Note'));
+  }
 }
