@@ -20,7 +20,7 @@ const packageDefinition = protoLoader.loadSync(protoPath, {
 const inventoryProto = grpc.loadPackageDefinition(packageDefinition) as any;
 
 const client = new inventoryProto.inventory.InventoryService(
-  'localhost:50051',
+  process.env.INVENTORY_GRPC_URL || 'localhost:50051',
   grpc.credentials.createInsecure()
 );
 
