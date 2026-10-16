@@ -10,9 +10,10 @@ type SaleLine = {
 
 type Sale = {
   id: string;
-  displayId: string;
-  registerDisplayId: string;
-  cashierName: string;
+  displayId?: string;
+  registerId: string;
+  storeId: string;
+  cashierId: string;
   paymentMethod: "CASH" | "CARD" | "MIXED";
   totalAmount: string;
   lines: SaleLine[];
@@ -28,6 +29,10 @@ const NAV: { id: View; label: string; icon: string }[] = [
 
 const money = (n: number) =>
   n.toLocaleString("en-KE", { style: "currency", currency: "KES" });
+
+// The API doesn't return a displayId yet, so fall back to a short id.
+const saleLabel = (s: { id: string; displayId?: string }) =>
+  s.displayId ?? s.id.slice(0, 8).toUpperCase();
 
 export default function App() {
   const [view, setView] = useState<View>("terminal");
@@ -127,8 +132,11 @@ function TerminalView({
   todayTotal: number;
   saleCount: number;
 }) {
-  const [registerDisplayId, setRegisterDisplayId] = useState("REG-0001");
-  const [cashierName, setCashierName] = useState("");
+  const [registerId, setRegisterId] = useState("REG-0001");
+  const [storeId, setStoreId] = useState("STORE-1");
+  // Inventory location the stock is checked against and taken from.
+  const [location, setLocation] = useState("MAIN_WAREHOUSE");
+  const [cashierId, setCashierId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "MIXED">("CASH");
   const [basket, setBasket] = useState<SaleLine[]>([]);
   const [productCode, setProductCode] = useState("");
@@ -169,8 +177,12 @@ function TerminalView({
       setMessage("Basket is empty.");
       return;
     }
-    if (!cashierName) {
+    if (!cashierId) {
       setMessage("Enter the cashier name.");
+      return;
+    }
+    if (!registerId || !storeId || !location) {
+      setMessage("Fill register, store, and location.");
       return;
     }
 
@@ -180,15 +192,17 @@ function TerminalView({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          registerDisplayId,
-          cashierName,
+          registerId: registerId.trim(),
+          storeId: storeId.trim(),
+          cashierId: cashierId.trim(),
           paymentMethod,
+          location: location.trim(),
           lines: basket,
         }),
       });
       const json = await response.json();
       if (json.success) {
-        setMessage(`Sale ${json.data.displayId} completed — ${money(total)}.`);
+        setMessage(`Sale ${saleLabel(json.data)} completed — ${money(total)}.`);
         setBasket([]);
         onDone();
       } else {
@@ -306,15 +320,32 @@ function TerminalView({
             <label className="field">
               <span>Register</span>
               <input
-                value={registerDisplayId}
-                onChange={(e) => setRegisterDisplayId(e.target.value)}
+                value={registerId}
+                onChange={(e) => setRegisterId(e.target.value)}
               />
             </label>
             <label className="field">
+              <span>Store</span>
+              <input
+                value={storeId}
+                onChange={(e) => setStoreId(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Stock location</span>
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. MAIN_WAREHOUSE"
+              />
+            </label>
+          </div>
+          <div className="row">
+            <label className="field">
               <span>Cashier</span>
               <input
-                value={cashierName}
-                onChange={(e) => setCashierName(e.target.value)}
+                value={cashierId}
+                onChange={(e) => setCashierId(e.target.value)}
                 placeholder="Your name"
               />
             </label>
@@ -369,9 +400,9 @@ function SalesTable({ sales }: { sales: Sale[] }) {
             <tbody>
               {sales.map((s) => (
                 <tr key={s.id}>
-                  <td><strong>{s.displayId}</strong></td>
-                  <td>{s.registerDisplayId}</td>
-                  <td>{s.cashierName}</td>
+                  <td><strong>{saleLabel(s)}</strong></td>
+                  <td>{s.registerId}</td>
+                  <td>{s.cashierId}</td>
                   <td><span className="badge info">{s.paymentMethod}</span></td>
                   <td className="num">{money(Number(s.totalAmount))}</td>
                   <td>{new Date(s.createdAt).toLocaleString()}</td>
